@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Housing Helper v1.1</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <section class="topbar" aria-label="Calculator header">
+      <div>
+        <p class="eyebrow">Singapore property purchase planner</p>
+        <h1>Housing Helper <span>v1.1</span></h1>
+      </div>
+      <div class="status-pill" id="overallStatus">Ready</div>
+    </section>
+
+    <section class="summary-grid" aria-label="Purchase summary">
+      <article class="summary-card accent">
+        <span>Affordable price ceiling</span>
+        <strong id="maxPrice">$0</strong>
+        <small id="maxPriceReason">Based on funds and lending limits</small>
+      </article>
+      <article class="summary-card">
+        <span>Total upfront need</span>
+        <strong id="totalNeed">$0</strong>
+        <small>Cash, CPF-OA, stamp duty and buyer costs</small>
+      </article>
+      <article class="summary-card">
+        <span>Cash position</span>
+        <strong id="cashGap">$0</strong>
+        <small id="cashGapLabel">Surplus after required cash</small>
+      </article>
+      <article class="summary-card">
+        <span>CPF-OA position</span>
+        <strong id="cpfGap">$0</strong>
+        <small id="cpfGapLabel">Surplus after planned CPF use</small>
+      </article>
+    </section>
+
+    <section class="workspace">
+      <form class="panel inputs" id="plannerForm">
+        <div class="panel-head">
+          <h2>Inputs</h2>
+          <button type="button" class="icon-button" id="resetBtn" title="Reset to sample profile" aria-label="Reset to sample profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
+          </button>
+        </div>
+
+        <fieldset class="mobile-card active">
+          <legend><span class="section-number">01</span> Buyer 1 Profile</legend>
+          <p class="section-copy wide">Tell us who is buying and what income a lender may recognise.</p>
+          <label class="check-row wide">
+            <input id="hasSecondBuyer" type="checkbox">
+            Add a second buyer
+          </label>
+          <label>Citizenship
+            <select id="citizenship">
+              <option value="sc">Singapore Citizen</option>
+              <option value="spr">Singapore PR</option>
+              <option value="foreigner">Foreigner</option>
+              <option value="entity">Entity / trustee</option>
+            </select>
+          </label>
+          <label>Residential properties owned
+            <input id="ownedProperties" type="number" min="0" step="1" value="0">
+          </label>
+          <label>Gross monthly income
+            <input id="monthlyIncome" type="number" min="0" step="100" value="16000">
+          </label>
+          <label>Monthly debt obligations
+            <input id="monthlyDebt" type="number" min="0" step="100" value="1200">
+          </label>
+          <label>Buyer age at purchase
+            <input id="buyerAge" type="number" min="18" max="80" step="1" value="38">
+          </label>
+          <label>Income type
+            <select id="incomeType">
+              <option value="fixed">Fixed employment income</option>
+              <option value="selfEmployed">Self-employed / variable income</option>
+              <option value="commission">Commission / bonus-heavy income</option>
+            </select>
+          </label>
+          <label>Recognised income for loan assessment
+            <input id="incomeRecognition" type="range" min="40" max="100" step="5" value="100">
+            <span class="range-readout" id="incomeRecognitionReadout">100%</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="mobile-card second-buyer-card" id="buyer2Card">
+          <legend><span class="section-number">02</span> Buyer 2 Profile</legend>
+          <p class="section-copy wide">Buyer 2 contributes income, debt, cash and CPF to the household assessment.</p>
+          <label>Citizenship
+            <select id="citizenship2">
+              <option value="sc">Singapore Citizen</option>
+              <option value="spr">Singapore PR</option>
+              <option value="foreigner">Foreigner</option>
+              <option value="entity">Entity / trustee</option>
+            </select>
+          </label>
+          <label>Residential properties owned
+            <input id="ownedProperties2" type="number" min="0" step="1" value="0">
+          </label>
+          <label>Gross monthly income
+            <input id="monthlyIncome2" type="number" min="0" step="100" value="9000">
+          </label>
+          <label>Monthly debt obligations
+            <input id="monthlyDebt2" type="number" min="0" step="100" value="600">
+          </label>
+          <label>Buyer age at purchase
+            <input id="buyerAge2" type="number" min="18" max="80" step="1" value="36">
+          </label>
+          <label>Income type
+            <select id="incomeType2">
+              <option value="fixed">Fixed employment income</option>
+              <option value="selfEmployed">Self-employed / variable income</option>
+              <option value="commission">Commission / bonus-heavy income</option>
+            </select>
+          </label>
+          <label>Recognised income for loan assessment
+            <input id="incomeRecognition2" type="range" min="40" max="100" step="5" value="100">
+            <span class="range-readout" id="incomeRecognitionReadout2">100%</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="mobile-card">
+          <legend><span class="section-number">03</span> Available Funds</legend>
+          <p class="section-copy wide">Enter funds available for the purchase before keeping your chosen buffers.</p>
+          <div class="live-strip wide" aria-live="polite">
+            <span>Usable cash <strong id="usableCashPreview">$0</strong></span>
+            <span>Usable CPF-OA <strong id="usableCpfPreview">$0</strong></span>
+          </div>
+          <label>Cash available
+            <input id="cashAvailable" type="number" min="0" step="1000" value="220000">
+          </label>
+          <label>CPF-OA available
+            <input id="cpfAvailable" type="number" min="0" step="1000" value="180000">
+          </label>
+          <label>CPF housing grants
+            <input id="cpfGrants" type="number" min="0" step="1000" value="0">
+          </label>
+          <label>Net sale proceeds available
+            <input id="saleProceeds" type="number" min="0" step="1000" value="0">
+          </label>
+          <label class="buyer2-input">Buyer 2 cash available
+            <input id="cashAvailable2" type="number" min="0" step="1000" value="120000">
+          </label>
+          <label class="buyer2-input">Buyer 2 CPF-OA available
+            <input id="cpfAvailable2" type="number" min="0" step="1000" value="90000">
+          </label>
+          <label class="buyer2-input">Buyer 2 CPF housing grants
+            <input id="cpfGrants2" type="number" min="0" step="1000" value="0">
+          </label>
+          <label class="buyer2-input">Buyer 2 net sale proceeds
+            <input id="saleProceeds2" type="number" min="0" step="1000" value="0">
+          </label>
+        </fieldset>
+
+        <fieldset class="mobile-card">
+          <legend><span class="section-number">04</span> Target Property</legend>
+          <p class="section-copy wide">Choose the home type first, then adjust its price and valuation.</p>
+          <div class="choice-grid property-choices wide" role="group" aria-label="Property type shortcuts">
+            <button type="button" data-property="hdbBto">HDB</button>
+            <button type="button" data-property="hdbResale">Resale</button>
+            <button type="button" data-property="ec">EC</button>
+            <button type="button" data-property="privateCondo">Condo</button>
+            <button type="button" data-property="landed">Landed</button>
+            <button type="button" data-property="commercial">Commercial</button>
+          </div>
+          <label>Property type
+            <select id="propertyType">
+              <option value="hdbBto">HDB BTO / SBF</option>
+              <option value="hdbResale">HDB resale flat</option>
+              <option value="ec">Executive condominium</option>
+              <option value="privateCondo">Private condominium / apartment</option>
+              <option value="landed">Landed residential</option>
+              <option value="commercial">Commercial / industrial</option>
+              <option value="mixed">Mixed commercial and residential</option>
+            </select>
+          </label>
+          <label>Purchase price
+            <input id="purchasePrice" type="number" min="0" step="1000" value="1200000">
+          </label>
+          <label>Market valuation
+            <input id="marketValue" type="number" min="0" step="1000" value="1200000">
+          </label>
+          <label>Residential value share
+            <input id="residentialShare" type="range" min="0" max="100" step="5" value="100">
+            <span class="range-readout" id="residentialShareReadout">100%</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="mobile-card">
+          <legend><span class="section-number">05</span> Financing</legend>
+          <p class="section-copy wide">Set the broad financing route. Detailed lending assumptions are optional.</p>
+          <div class="choice-grid finance-choices wide" role="group" aria-label="Financing route shortcuts">
+            <button type="button" data-loan="bank">Bank loan</button>
+            <button type="button" data-loan="hdb">HDB loan</button>
+            <button type="button" data-loan="cash">No loan</button>
+          </div>
+          <label>Financing route
+            <select id="loanType">
+              <option value="bank">Bank / financial institution loan</option>
+              <option value="hdb">HDB housing loan</option>
+              <option value="cash">No loan</option>
+            </select>
+          </label>
+          <label>Outstanding housing loans
+            <input id="outstandingLoans" type="number" min="0" step="1" value="0">
+          </label>
+          <label>Loan tenure (years)
+            <input id="loanTenure" type="number" min="1" max="35" step="1" value="25">
+          </label>
+          <details class="advanced wide">
+            <summary>Advanced loan assumptions</summary>
+            <div class="advanced-grid">
+              <label>Stress interest rate
+                <input id="interestRate" type="number" min="0" step="0.05" value="4.0">
+              </label>
+              <label>Desired loan amount
+                <input id="desiredLoan" type="number" min="0" step="1000" value="900000">
+              </label>
+              <label class="check-row">
+                <input id="useMaxLoan" type="checkbox" checked>
+                Use maximum eligible loan
+              </label>
+            </div>
+          </details>
+        </fieldset>
+
+        <fieldset class="mobile-card">
+          <legend><span class="section-number">06</span> Renovation</legend>
+          <p class="section-copy wide">Estimate the cash needed after completion, including furniture and appliances.</p>
+          <label>Renovation scope
+            <select id="renovationScope">
+              <option value="light">Light refresh</option>
+              <option value="standard">Standard renovation</option>
+              <option value="premium">Premium renovation</option>
+              <option value="custom">Custom rate</option>
+            </select>
+          </label>
+          <label>Estimated floor area
+            <input id="floorArea" type="number" min="0" step="10" value="900">
+          </label>
+          <label>Renovation cost per sq ft
+            <input id="renoRate" type="number" min="0" step="5" value="55">
+          </label>
+          <label>Furniture / appliances / move-in
+            <input id="moveInReserve" type="number" min="0" step="1000" value="12000">
+          </label>
+        </fieldset>
+
+        <fieldset class="mobile-card">
+          <legend><span class="section-number">07</span> Buffers And Fees</legend>
+          <p class="section-copy wide">Keep reserves out of the purchase calculation and include transaction costs.</p>
+          <label>Legal / valuation / admin fees
+            <input id="legalFees" type="number" min="0" step="100" value="3500">
+          </label>
+          <label>Cash buffer to keep
+            <input id="cashBuffer" type="number" min="0" step="1000" value="50000">
+          </label>
+          <label>CPF-OA buffer to keep
+            <input id="cpfBuffer" type="number" min="0" step="1000" value="20000">
+          </label>
+        </fieldset>
+        <div class="mobile-stepper" aria-label="Mobile form navigation">
+          <button type="button" id="prevStep">Back</button>
+          <span id="stepCounter">1 of 6</span>
+          <button type="button" id="nextStep">Next</button>
+        </div>
+      </form>
+
+      <section class="panel results" aria-label="Affordability results">
+        <div class="panel-head">
+          <h2>Results</h2>
+          <button type="button" class="icon-button" id="printBtn" title="Print or save as PDF" aria-label="Print or save as PDF">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+          </button>
+        </div>
+
+        <div class="scoreboard">
+          <div class="score-visual" aria-hidden="true">
+            <img src="assets/housing-helper-illustration.png" alt="">
+          </div>
+          <div>
+            <p class="eyebrow">Purchase diagnosis</p>
+            <h3 id="diagnosis">Calculating...</h3>
+            <p id="diagnosisDetail"></p>
+          </div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Result views">
+          <button type="button" class="tab active" data-tab="outlay">Outlay</button>
+          <button type="button" class="tab" data-tab="loan">Loan</button>
+          <button type="button" class="tab" data-tab="duties">Duties</button>
+          <button type="button" class="tab" data-tab="eligibility">Eligibility</button>
+        </div>
+
+        <div class="tab-panel active" id="outlay">
+          <div class="breakdown" id="outlayRows"></div>
+          <div class="meter-block">
+            <div class="meter-label"><span>Cash required</span><strong id="cashRequiredLabel">$0</strong></div>
+            <div class="meter"><span id="cashMeter"></span></div>
+            <div class="meter-label"><span>CPF-OA planned</span><strong id="cpfRequiredLabel">$0</strong></div>
+            <div class="meter cpf"><span id="cpfMeter"></span></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="loan">
+          <div class="breakdown" id="loanRows"></div>
+          <div class="notice" id="loanNotice"></div>
+        </div>
+
+        <div class="tab-panel" id="duties">
+          <div class="breakdown" id="dutyRows"></div>
+          <div class="notice">Stamp duty is computed on the higher of purchase price or market value. Remissions, decoupling, trust, entity and nationality treaty cases need separate professional review.</div>
+        </div>
+
+        <div class="tab-panel" id="eligibility">
+          <div class="breakdown" id="eligibilityRows"></div>
+          <div class="notice" id="eligibilityNotice"></div>
+        </div>
+
+        <div class="sources">
+          <strong>Rule basis checked 15 Jun 2026:</strong>
+          IRAS BSD/ABSD tables including joint-buyer ABSD treatment, CPF home ownership guidance, and HDB public eligibility/HFE guidance. Loan settings remain editable because final approvals depend on lender/HFE assessment.
+        </div>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

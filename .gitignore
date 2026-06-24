@@ -1,0 +1,5 @@
+.DS_Store
+Thumbs.db
+*.log
+/affordability-*.png
+/housing-helper-v1-*.png
