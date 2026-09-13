@@ -1,543 +1,550 @@
+const POLICY_DATE = "14 Sep 2026";
 const $ = (id) => document.getElementById(id);
 
 const defaults = {
-  hasSecondBuyer: false,
-  citizenship: "sc",
-  ownedProperties: 0,
-  monthlyIncome: 16000,
-  monthlyDebt: 1200,
-  buyerAge: 38,
-  incomeType: "fixed",
-  incomeRecognition: 100,
-  citizenship2: "sc",
-  ownedProperties2: 0,
-  monthlyIncome2: 9000,
-  monthlyDebt2: 600,
-  buyerAge2: 36,
-  incomeType2: "fixed",
-  incomeRecognition2: 100,
-  cashAvailable: 220000,
-  cpfAvailable: 180000,
-  cpfGrants: 0,
-  saleProceeds: 0,
-  cashAvailable2: 120000,
-  cpfAvailable2: 90000,
-  cpfGrants2: 0,
-  saleProceeds2: 0,
-  propertyType: "privateCondo",
-  purchasePrice: 1200000,
-  marketValue: 1200000,
-  residentialShare: 100,
-  loanType: "bank",
-  outstandingLoans: 0,
-  loanTenure: 25,
-  interestRate: 4.0,
-  desiredLoan: 900000,
-  useMaxLoan: true,
-  legalFees: 3500,
-  renovationScope: "standard",
-  floorArea: 900,
-  renoRate: 55,
-  moveInReserve: 12000,
-  cashBuffer: 50000,
-  cpfBuffer: 20000
+  hasSecondBuyer: false, applicantProfile: "family", firstTimer: "yes",
+  citizenship: "sc", buyerAge: 38, ownedProperties: 0, housingLoans1: 0,
+  citizenship2: "sc", buyerAge2: 36, ownedProperties2: 0, housingLoans2: 0,
+  monthlyIncome: 16000, monthlyDebt: 1200, incomeType: "fixed", incomeRecognition: 100,
+  monthlyIncome2: 9000, monthlyDebt2: 600, incomeType2: "fixed", incomeRecognition2: 100,
+  cashAvailable: 220000, cpfAvailable: 180000, otherGrants: 0, saleProceeds: 0,
+  cashAvailable2: 120000, cpfAvailable2: 90000, otherGrants2: 0, saleProceeds2: 0,
+  propertyType: "privateCondo", flatSize: "small", purchasePrice: 1200000, marketValue: 1200000,
+  remainingLease: 99, residentialShare: 100, proximity: "none", priorHdbLoans: "0",
+  privatePropertyStatus: "none", mopStatus: "na", loanType: "bank", loanTenure: 25,
+  actualInterestRate: 3.0, assessmentRate: 4.0, desiredLoan: 900000, useMaxLoan: true,
+  renovationScope: "standard", floorArea: 900, renoRate: 55, moveInReserve: 12000,
+  legalFees: 3500, cashBuffer: 50000, cpfBuffer: 20000, priorSubsidised: "none"
 };
 
-const renovationRates = {
-  light: 30,
-  standard: 55,
-  premium: 90
-};
+const renovationRates = { light: 30, standard: 55, premium: 90 };
+const resaleLevies = { none: 0, "2room": 15000, "3room": 30000, "4room": 40000, "5room": 45000, executive: 50000, ec: 55000 };
+const residentialTypes = new Set(["hdbBto", "hdbResale", "ec", "privateCondo", "landed"]);
+const hdbTypes = new Set(["hdbBto", "hdbResale"]);
 
-const money = (value) => {
-  const rounded = Math.round(value || 0);
-  return rounded.toLocaleString("en-SG", { style: "currency", currency: "SGD", maximumFractionDigits: 0 });
-};
+const money = (value) => Math.round(Number(value) || 0).toLocaleString("en-SG", { style: "currency", currency: "SGD", maximumFractionDigits: 0 });
+const percent = (value) => `${(value * 100).toFixed(value * 100 % 1 ? 1 : 0)}%`;
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
-const num = (id) => Number($(id).value || 0);
-const val = (id) => $(id).value;
+function isResidential(input) { return residentialTypes.has(input.propertyType); }
+function residentialShare(input) { return isResidential(input) ? 1 : input.propertyType === "mixed" ? clamp(input.residentialShare, 0, 1) : 0; }
+function stampBase(input) { return Math.max(input.purchasePrice, input.marketValue); }
+function loanBase(input) { return Math.min(input.purchasePrice, input.marketValue); }
 
-function getInputs() {
-  return {
-    hasSecondBuyer: $("hasSecondBuyer").checked,
-    citizenship: val("citizenship"),
-    ownedProperties: num("ownedProperties"),
-    monthlyIncome: num("monthlyIncome"),
-    monthlyDebt: num("monthlyDebt"),
-    buyerAge: num("buyerAge"),
-    incomeType: val("incomeType"),
-    incomeRecognition: num("incomeRecognition") / 100,
-    citizenship2: val("citizenship2"),
-    ownedProperties2: num("ownedProperties2"),
-    monthlyIncome2: num("monthlyIncome2"),
-    monthlyDebt2: num("monthlyDebt2"),
-    buyerAge2: num("buyerAge2"),
-    incomeType2: val("incomeType2"),
-    incomeRecognition2: num("incomeRecognition2") / 100,
-    cashAvailable: num("cashAvailable"),
-    cpfAvailable: num("cpfAvailable"),
-    cpfGrants: num("cpfGrants"),
-    saleProceeds: num("saleProceeds"),
-    cashAvailable2: num("cashAvailable2"),
-    cpfAvailable2: num("cpfAvailable2"),
-    cpfGrants2: num("cpfGrants2"),
-    saleProceeds2: num("saleProceeds2"),
-    propertyType: val("propertyType"),
-    purchasePrice: num("purchasePrice"),
-    marketValue: num("marketValue"),
-    residentialShare: num("residentialShare") / 100,
-    loanType: val("loanType"),
-    outstandingLoans: num("outstandingLoans"),
-    loanTenure: num("loanTenure"),
-    interestRate: num("interestRate") / 100,
-    desiredLoan: num("desiredLoan"),
-    useMaxLoan: $("useMaxLoan").checked,
-    legalFees: num("legalFees"),
-    renovationScope: val("renovationScope"),
-    floorArea: num("floorArea"),
-    renoRate: num("renoRate"),
-    moveInReserve: num("moveInReserve"),
-    cashBuffer: num("cashBuffer"),
-    cpfBuffer: num("cpfBuffer")
-  };
-}
-
-function buyers(input) {
-  const first = {
-    label: "Buyer 1",
-    citizenship: input.citizenship,
-    ownedProperties: input.ownedProperties,
-    monthlyIncome: input.monthlyIncome,
-    monthlyDebt: input.monthlyDebt,
-    buyerAge: input.buyerAge,
-    incomeType: input.incomeType,
-    incomeRecognition: input.incomeRecognition,
-    cashAvailable: input.cashAvailable,
-    cpfAvailable: input.cpfAvailable,
-    cpfGrants: input.cpfGrants,
-    saleProceeds: input.saleProceeds
-  };
-  const second = {
-    label: "Buyer 2",
-    citizenship: input.citizenship2,
-    ownedProperties: input.ownedProperties2,
-    monthlyIncome: input.monthlyIncome2,
-    monthlyDebt: input.monthlyDebt2,
-    buyerAge: input.buyerAge2,
-    incomeType: input.incomeType2,
-    incomeRecognition: input.incomeRecognition2,
-    cashAvailable: input.cashAvailable2,
-    cpfAvailable: input.cpfAvailable2,
-    cpfGrants: input.cpfGrants2,
-    saleProceeds: input.saleProceeds2
-  };
-  return input.hasSecondBuyer ? [first, second] : [first];
-}
-
-function household(input) {
-  return buyers(input).reduce((total, buyer) => {
-    total.monthlyIncome += buyer.monthlyIncome;
-    total.assessedIncome += buyer.monthlyIncome * buyer.incomeRecognition;
-    total.monthlyDebt += buyer.monthlyDebt;
-    total.cashAvailable += buyer.cashAvailable;
-    total.cpfAvailable += buyer.cpfAvailable;
-    total.cpfGrants += buyer.cpfGrants;
-    total.saleProceeds += buyer.saleProceeds;
-    total.maxOwnedProperties = Math.max(total.maxOwnedProperties, buyer.ownedProperties);
-    total.youngestAge = Math.min(total.youngestAge, buyer.buyerAge || 99);
-    return total;
-  }, {
-    monthlyIncome: 0,
-    assessedIncome: 0,
-    monthlyDebt: 0,
-    cashAvailable: 0,
-    cpfAvailable: 0,
-    cpfGrants: 0,
-    saleProceeds: 0,
-    maxOwnedProperties: 0,
-    youngestAge: 99
-  });
-}
-
-function renovationCost(input) {
-  return Math.max(0, input.floorArea * input.renoRate + input.moveInReserve);
-}
-
-function isResidential(type) {
-  return type !== "commercial";
-}
-
-function isPublicHousing(type) {
-  return type === "hdbBto" || type === "hdbResale";
-}
-
-function isMsrProperty(type) {
-  return type === "hdbBto" || type === "hdbResale" || type === "ec";
-}
-
-function stampBase(input) {
-  return Math.max(input.purchasePrice, input.marketValue);
-}
-
-function marginalDuty(amount, brackets) {
-  let remaining = Math.max(0, amount);
+function marginalDuty(amount, bands) {
+  if (amount <= 0) return 0;
+  let remaining = amount;
   let total = 0;
-  for (const [cap, rate] of brackets) {
-    const slice = cap === Infinity ? remaining : Math.min(remaining, cap);
-    total += slice * rate;
+  for (const [width, rate] of bands) {
+    const slice = width === Infinity ? remaining : Math.min(remaining, width);
+    total += Math.max(0, slice) * rate;
     remaining -= slice;
     if (remaining <= 0) break;
   }
-  return Math.floor(Math.max(1, total));
+  return Math.floor(total);
 }
 
-function bsd(input) {
-  const base = stampBase(input);
-  if (input.propertyType === "mixed") {
-    const residential = base * input.residentialShare;
-    const nonResidential = base - residential;
-    return bsdResidential(residential) + bsdNonResidential(nonResidential);
-  }
-  return isResidential(input.propertyType) ? bsdResidential(base) : bsdNonResidential(base);
+function residentialBsd(amount) {
+  return marginalDuty(amount, [[180000, .01], [180000, .02], [640000, .03], [500000, .04], [1500000, .05], [Infinity, .06]]);
 }
 
-function bsdResidential(amount) {
-  return marginalDuty(amount, [
-    [180000, 0.01],
-    [180000, 0.02],
-    [640000, 0.03],
-    [500000, 0.04],
-    [1500000, 0.05],
-    [Infinity, 0.06]
-  ]);
+function nonResidentialBsd(amount) {
+  return marginalDuty(amount, [[180000, .01], [180000, .02], [640000, .03], [500000, .04], [Infinity, .05]]);
 }
 
-function bsdNonResidential(amount) {
-  return marginalDuty(amount, [
-    [180000, 0.01],
-    [180000, 0.02],
-    [640000, 0.03],
-    [500000, 0.04],
-    [Infinity, 0.05]
-  ]);
+function buyers(input) {
+  const list = [{
+    label: "Buyer 1", citizenship: input.citizenship, age: input.buyerAge,
+    properties: input.ownedProperties, housingLoans: input.housingLoans1,
+    income: input.monthlyIncome, debt: input.monthlyDebt, recognition: input.incomeRecognition,
+    incomeType: input.incomeType, cash: input.cashAvailable, cpf: input.cpfAvailable,
+    grants: input.otherGrants, saleProceeds: input.saleProceeds
+  }];
+  if (input.hasSecondBuyer) list.push({
+    label: "Buyer 2", citizenship: input.citizenship2, age: input.buyerAge2,
+    properties: input.ownedProperties2, housingLoans: input.housingLoans2,
+    income: input.monthlyIncome2, debt: input.monthlyDebt2, recognition: input.incomeRecognition2,
+    incomeType: input.incomeType2, cash: input.cashAvailable2, cpf: input.cpfAvailable2,
+    grants: input.otherGrants2, saleProceeds: input.saleProceeds2
+  });
+  return list;
 }
 
-function absdRateForBuyer(buyer, propertyType) {
-  if (!isResidential(propertyType)) return 0;
-  const count = buyer.ownedProperties + 1;
-  if (buyer.citizenship === "sc") return count === 1 ? 0 : count === 2 ? 0.20 : 0.30;
-  if (buyer.citizenship === "spr") return count === 1 ? 0.05 : count === 2 ? 0.30 : 0.35;
-  if (buyer.citizenship === "foreigner") return 0.60;
-  return 0.65;
+function household(input) {
+  const list = buyers(input);
+  return {
+    buyers: list,
+    grossIncome: list.reduce((sum, buyer) => sum + buyer.income, 0),
+    assessedIncome: list.reduce((sum, buyer) => sum + buyer.income * buyer.recognition, 0),
+    monthlyDebt: list.reduce((sum, buyer) => sum + buyer.debt, 0),
+    housingLoans: Math.max(...list.map((buyer) => buyer.housingLoans)),
+    cash: list.reduce((sum, buyer) => sum + buyer.cash + buyer.saleProceeds, 0),
+    cpf: list.reduce((sum, buyer) => sum + buyer.cpf, 0),
+    confirmedGrants: list.reduce((sum, buyer) => sum + buyer.grants, 0),
+    youngestAge: Math.min(...list.map((buyer) => buyer.age)),
+    averageAge: list.reduce((sum, buyer) => sum + buyer.age, 0) / list.length,
+    hasSc: list.some((buyer) => buyer.citizenship === "sc")
+  };
+}
+
+function absdRateForBuyer(buyer) {
+  if (buyer.citizenship === "entity") return .65;
+  if (buyer.citizenship === "foreigner") return .60;
+  if (buyer.citizenship === "spr") return buyer.properties === 0 ? .05 : buyer.properties === 1 ? .30 : .35;
+  return buyer.properties === 0 ? 0 : buyer.properties === 1 ? .20 : .30;
 }
 
 function absdRate(input) {
-  return Math.max(...buyers(input).map((buyer) => absdRateForBuyer(buyer, input.propertyType)));
+  if (residentialShare(input) === 0) return 0;
+  return Math.max(...buyers(input).map(absdRateForBuyer));
 }
 
-function ltvSettings(input) {
-  if (input.loanType === "cash") return { ltv: 0, minCashRate: 1, reason: "No loan selected" };
-  if (input.loanType === "hdb") return { ltv: 0.75, minCashRate: 0, reason: "HDB loan default: 75% LTV, downpayment may be CPF/cash" };
-  const effectiveLoans = Math.max(input.outstandingLoans, household(input).maxOwnedProperties > 0 ? 1 : 0);
-  if (effectiveLoans === 0) return { ltv: 0.75, minCashRate: 0.05, reason: "Bank loan default: first housing loan" };
-  if (effectiveLoans === 1) return { ltv: 0.45, minCashRate: 0.25, reason: "Bank loan default: one outstanding housing loan or buyer with existing residential property" };
-  return { ltv: 0.35, minCashRate: 0.25, reason: "Bank loan default: two or more outstanding housing loans" };
+function duties(input) {
+  const base = stampBase(input);
+  const share = residentialShare(input);
+  const residentialValue = base * share;
+  const nonResidentialValue = base - residentialValue;
+  const bsdResidential = residentialBsd(residentialValue);
+  const bsdNonResidential = nonResidentialBsd(nonResidentialValue);
+  const absd = Math.floor(residentialValue * absdRate(input));
+  return { base, residentialValue, nonResidentialValue, bsdResidential, bsdNonResidential, bsd: bsdResidential + bsdNonResidential, absd, total: bsdResidential + bsdNonResidential + absd };
 }
 
-function monthlyPayment(loan, annualRate, years) {
-  if (loan <= 0) return 0;
+function ehgAmount(income) {
+  const bands = [[1500,120000],[2000,110000],[2500,105000],[3000,95000],[3500,90000],[4000,80000],[4500,70000],[5000,65000],[5500,55000],[6000,50000],[6500,40000],[7000,30000],[7500,25000],[8000,20000],[8500,10000],[9000,5000]];
+  return (bands.find(([ceiling]) => income <= ceiling) || [0, 0])[1];
+}
+
+function grantEstimate(input) {
+  const hh = household(input);
+  const hdbPurchase = hdbTypes.has(input.propertyType);
+  const firstTimer = input.firstTimer === "yes";
+  const profileFactor = input.applicantProfile === "single" ? .5 : 1;
+  const citizenshipEligible = hh.hasSc && hh.buyers.every((buyer) => buyer.citizenship === "sc" || buyer.citizenship === "spr");
+  let ehg = 0;
+  let resaleGrant = 0;
+  let proximityGrant = 0;
+  const notes = [];
+  const ehgCeiling = input.applicantProfile === "single" ? 4500 : 9000;
+  if (hdbPurchase && firstTimer && citizenshipEligible && hh.grossIncome <= ehgCeiling) ehg = ehgAmount(hh.grossIncome) * profileFactor;
+  if (input.propertyType === "hdbResale" && firstTimer && citizenshipEligible) {
+    const ceiling = input.applicantProfile === "single" ? 8000 : input.applicantProfile === "jointSingles" ? 16000 : 14000;
+    if (hh.grossIncome <= ceiling) resaleGrant = (input.flatSize === "small" ? 80000 : 50000) * profileFactor;
+    const citizenships = hh.buyers.map((buyer) => buyer.citizenship);
+    if (resaleGrant && citizenships.includes("sc") && citizenships.includes("spr")) {
+      resaleGrant = Math.max(0, resaleGrant - 10000);
+      notes.push("A $10,000 SC/SPR adjustment is screened against the resale grant.");
+    }
+  }
+  if (input.propertyType === "hdbResale" && citizenshipEligible && input.proximity !== "none") {
+    const familyAmount = input.proximity === "with" ? 30000 : 20000;
+    proximityGrant = familyAmount * profileFactor;
+  }
+  if ((ehg || resaleGrant || proximityGrant) && buyers(input).some((buyer) => buyer.citizenship === "spr")) notes.push("SC/SPR household adjustments may apply.");
+  if (hdbPurchase && input.firstTimer === "unsure") notes.push("First-timer status must be confirmed through HFE.");
+  const uncappedTotal = ehg + resaleGrant + proximityGrant;
+  const total = Math.min(uncappedTotal, loanBase(input) * .95);
+  if (total < uncappedTotal) notes.push("Indicative grants are capped at 95% of the lower price or value.");
+  if (hdbPurchase && hh.hasSc && !citizenshipEligible) notes.push("A non-resident household member requires scheme-specific HFE assessment.");
+  return { ehg, resaleGrant, proximityGrant, total, notes };
+}
+
+function indicativeResaleLevy(input) {
+  if (!(input.propertyType === "hdbBto" || input.propertyType === "ec")) return 0;
+  const base = resaleLevies[input.priorSubsidised] || 0;
+  return input.applicantProfile === "single" ? base / 2 : base;
+}
+
+function paymentForLoan(principal, annualRate, years) {
+  if (principal <= 0 || years <= 0) return 0;
   const months = years * 12;
   const monthlyRate = annualRate / 12;
-  if (monthlyRate === 0) return loan / months;
-  return loan * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+  if (monthlyRate === 0) return principal / months;
+  return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
 }
 
-function maxLoanFromPayment(payment, annualRate, years) {
-  if (payment <= 0) return 0;
+function principalForPayment(payment, annualRate, years) {
+  if (payment <= 0 || years <= 0) return 0;
   const months = years * 12;
   const monthlyRate = annualRate / 12;
   if (monthlyRate === 0) return payment * months;
   return payment * (1 - Math.pow(1 + monthlyRate, -months)) / monthlyRate;
 }
 
-function loanCapacity(input) {
-  const settings = ltvSettings(input);
-  const base = stampBase(input);
+function leaseCoverage(input) {
   const hh = household(input);
-  const ltvCap = base * settings.ltv;
-  const assessedIncome = hh.assessedIncome;
-  const tdsrPaymentCap = Math.max(0, assessedIncome * 0.55 - hh.monthlyDebt);
-  const msrPaymentCap = Math.max(0, assessedIncome * 0.30);
-  const paymentCap = isMsrProperty(input.propertyType) ? Math.min(tdsrPaymentCap, msrPaymentCap) : tdsrPaymentCap;
-  const servicingCap = maxLoanFromPayment(paymentCap, input.interestRate, input.loanTenure);
-  const requested = input.useMaxLoan ? Infinity : input.desiredLoan;
-  const loan = Math.min(ltvCap, servicingCap, requested);
-  const payment = monthlyPayment(loan, input.interestRate, input.loanTenure);
-  return { settings, assessedIncome, ltvCap, servicingCap, paymentCap, loan: Math.max(0, loan), payment };
+  if (input.remainingLease >= 900) return { coversTo95: true, factor: 1 };
+  const yearsNeeded = Math.max(1, 95 - hh.youngestAge);
+  const coversTo95 = input.remainingLease >= yearsNeeded;
+  const factor = coversTo95 ? 1 : clamp((input.remainingLease - 20) / Math.max(1, yearsNeeded - 20), 0, 1);
+  return { coversTo95, factor };
+}
+
+function routeAssessment(input, route) {
+  const hh = household(input);
+  const base = loanBase(input);
+  const hdbProperty = hdbTypes.has(input.propertyType);
+  const residential = isResidential(input);
+  const lease = leaseCoverage(input);
+  let available = true;
+  let status = "Available for screening";
+  let reason = "Subject to lender approval";
+  let ltv = 0;
+  let minCashRate = 0;
+  let tenure = input.loanTenure;
+  let actualRate = input.actualInterestRate;
+  let assessmentRate = input.assessmentRate;
+  let paymentCap = Infinity;
+
+  if (residential && input.mopStatus === "notMet") {
+    available = false;
+    status = "Likely unavailable";
+    reason = "The declared HDB minimum occupation period has not been completed";
+  } else if (route === "cash") {
+    reason = residential ? "No mortgage; eligible CPF-OA may still be used" : "Cash purchase; CPF housing use is unavailable";
+  } else if (!residential) {
+    available = false;
+    status = "Bank-specific assessment required";
+    reason = "Commercial and mixed-use financing is not modelled using residential LTV rules";
+  } else if (route === "hdb") {
+    actualRate = .026;
+    assessmentRate = .03;
+    if (!hdbProperty) {
+      available = false;
+      status = "Unavailable";
+      reason = "HDB concessionary loans are for eligible HDB flat purchases only";
+    } else if (!hh.hasSc) {
+      available = false;
+      status = "Likely unavailable";
+      reason = "At least one applicant must be a Singapore Citizen";
+    } else if (Number(input.priorHdbLoans) >= 2) {
+      available = false;
+      status = "Likely unavailable";
+      reason = "A core family nucleus generally cannot take more than two HDB concessionary loans";
+    } else if (input.privatePropertyStatus === "current" || input.privatePropertyStatus === "recent") {
+      available = false;
+      status = "Likely unavailable";
+      reason = "Current or recently disposed private-property interests require HFE review and generally fail this HDB-loan screen";
+    } else if (input.mopStatus === "notMet") {
+      available = false;
+      status = "Likely unavailable";
+      reason = "The current HDB minimum occupation period has not been completed";
+    } else if (input.applicantProfile === "single" && hh.youngestAge < 35) {
+      available = false;
+      status = "Scheme review required";
+      reason = "Most single-citizen HDB purchase routes require the applicant to be at least age 35";
+    } else {
+      const incomeCeiling = input.applicantProfile === "single" ? 8000 : input.applicantProfile === "other" ? 16000 : 16000;
+      if (hh.grossIncome > incomeCeiling) {
+        available = false;
+        status = "Likely unavailable";
+        reason = `Gross income exceeds the ${money(incomeCeiling)} monthly screening ceiling`;
+      }
+      const tenureCap = Math.max(0, Math.floor(Math.min(25, 65 - hh.averageAge, input.remainingLease >= 900 ? 25 : input.remainingLease - 20)));
+      tenure = Math.min(input.loanTenure, tenureCap);
+      if (tenure < 1) {
+        available = false;
+        status = "Unavailable";
+        reason = "Age or remaining lease leaves no modelled HDB loan tenure";
+      }
+      ltv = .75 * lease.factor;
+      paymentCap = Math.max(0, hh.assessedIncome * .30);
+      if (!lease.coversTo95 && available) {
+        status = "Indicative only";
+        reason = "HDB will determine the pro-rated LTV because the lease does not cover the youngest buyer to age 95";
+      }
+    }
+  } else {
+    const threshold = hdbProperty ? 30 : 35;
+    const longLoan = input.loanTenure > threshold || buyers(input).some((buyer) => buyer.age + input.loanTenure > 65);
+    const loanCount = hh.housingLoans;
+    const standardLtvs = loanCount === 0 ? [.75, .55] : loanCount === 1 ? [.45, .25] : [.35, .15];
+    ltv = standardLtvs[longLoan ? 1 : 0];
+    minCashRate = loanCount === 0 ? (longLoan ? .10 : .05) : .25;
+    paymentCap = Math.max(0, hh.assessedIncome * .55 - hh.monthlyDebt);
+    if (hdbProperty || input.propertyType === "ec") paymentCap = Math.min(paymentCap, Math.max(0, hh.assessedIncome * .30));
+    reason = longLoan ? "Lower residential LTV tier used because age 65 or tenure threshold is crossed" : "Residential bank-loan screening using declared outstanding housing loans";
+  }
+
+  const ltvCap = available ? base * ltv : 0;
+  const servicingCap = available && route !== "cash" ? principalForPayment(paymentCap, assessmentRate, tenure) : 0;
+  const maximumLoan = available && route !== "cash" ? Math.max(0, Math.min(ltvCap, servicingCap)) : 0;
+  const chosenLoan = input.useMaxLoan ? maximumLoan : Math.min(input.desiredLoan, maximumLoan);
+  return {
+    route, available, status, reason, ltv, minCashRate, tenure, actualRate, assessmentRate,
+    paymentCap, ltvCap, servicingCap, maximumLoan, loan: chosenLoan,
+    expectedPayment: paymentForLoan(chosenLoan, actualRate, tenure),
+    assessedPayment: paymentForLoan(chosenLoan, assessmentRate, tenure)
+  };
+}
+
+function cpfUsageLimit(input, route) {
+  if (!isResidential(input)) return { limit: 0, factor: 0, note: "CPF housing savings are not modelled for non-residential property." };
+  if (input.remainingLease < 20) return { limit: 0, factor: 0, note: "CPF use is unavailable in this screening because the remaining lease is below 20 years." };
+  const lease = leaseCoverage(input);
+  const valuationLimit = loanBase(input) * lease.factor;
+  const limit = route === "bank" ? valuationLimit * 1.2 : valuationLimit;
+  return { limit, factor: lease.factor, note: lease.coversTo95 ? "Lease covers the youngest buyer to age 95." : "CPF usage is pro-rated for screening; confirm the exact limit with CPF Board." };
+}
+
+function renovation(input) {
+  const rate = input.renovationScope === "custom" ? input.renoRate : renovationRates[input.renovationScope];
+  return input.floorArea * rate + input.moveInReserve;
 }
 
 function calculate(input) {
-  const base = stampBase(input);
-  const dutyBsd = bsd(input);
-  const dutyAbsd = Math.floor(base * absdRate(input));
-  const duties = dutyBsd + dutyAbsd;
-  const loan = loanCapacity(input);
-  const renovation = renovationCost(input);
   const hh = household(input);
-  const minCashDown = base * loan.settings.minCashRate;
-  const downpayment = Math.max(0, input.purchasePrice - loan.loan);
-  const cpfPool = Math.max(0, hh.cpfAvailable + hh.cpfGrants - input.cpfBuffer);
-  const cashPool = Math.max(0, hh.cashAvailable + hh.saleProceeds - input.cashBuffer);
-  const nonDownCash = dutyAbsd + input.legalFees + renovation;
-  const cpfEligibleNonLoan = dutyBsd + Math.max(0, downpayment - minCashDown);
-  const cpfUsed = Math.min(cpfPool, cpfEligibleNonLoan);
-  const cashRequired = minCashDown + nonDownCash + Math.max(0, cpfEligibleNonLoan - cpfUsed);
-  const totalUpfront = downpayment + duties + input.legalFees + renovation;
+  const duty = duties(input);
+  const grants = grantEstimate(input);
+  const levy = indicativeResaleLevy(input);
+  const routes = {
+    bank: routeAssessment(input, "bank"),
+    hdb: routeAssessment(input, "hdb"),
+    cash: routeAssessment(input, "cash")
+  };
+  const selected = routes[input.loanType];
+  const reno = renovation(input);
+  const cov = Math.max(0, input.purchasePrice - input.marketValue);
+  const cashPool = Math.max(0, hh.cash - input.cashBuffer);
+  const cpfBalances = Math.max(0, hh.cpf - input.cpfBuffer);
+  const grantPool = hh.confirmedGrants + grants.total;
+  const cpfPool = cpfBalances + grantPool;
+  const minimumCashDown = selected.available && selected.route === "bank" ? loanBase(input) * selected.minCashRate : 0;
+  const cpfLimit = cpfUsageLimit(input, selected.route);
+  const residentialDuty = duty.bsdResidential + duty.absd;
+  const downpayment = Math.max(0, input.purchasePrice - selected.loan);
+  const cpfEligible = isResidential(input)
+    ? Math.max(0, downpayment - cov - minimumCashDown) + residentialDuty + input.legalFees
+    : 0;
+  const cpfUsed = Math.min(cpfPool, cpfLimit.limit, cpfEligible);
+  const totalOutlay = input.purchasePrice + duty.total + input.legalFees + reno + levy;
+  const cashRequired = Math.max(0, totalOutlay - selected.loan - cpfUsed);
   const cashSurplus = cashPool - cashRequired;
   const cpfSurplus = cpfPool - cpfUsed;
-  return { base, dutyBsd, dutyAbsd, duties, loan, renovation, household: hh, minCashDown, downpayment, cpfPool, cashPool, cpfUsed, cashRequired, totalUpfront, cashSurplus, cpfSurplus };
+  return {
+    hh, duty, grants, levy, routes, selected, reno, cov, cashPool, cpfBalances, grantPool, cpfPool,
+    cpfLimit, minimumCashDown, downpayment, cpfEligible, cpfUsed, totalOutlay, cashRequired,
+    cashSurplus, cpfSurplus, viable: selected.available && cashSurplus >= 0
+  };
 }
 
 function affordablePrice(input) {
+  if (!routeAssessment(input, input.loanType).available) return 0;
   let low = 0;
-  const hh = household(input);
-  let high = Math.max(500000, input.purchasePrice * 2, hh.cashAvailable + hh.cpfAvailable + hh.monthlyIncome * 12 * 8);
-  for (let i = 0; i < 42; i += 1) {
+  let high = Math.max(500000, input.purchasePrice * 2, household(input).cash + household(input).cpf + household(input).grossIncome * 120);
+  for (let i = 0; i < 56; i += 1) {
     const mid = (low + high) / 2;
     const trial = { ...input, purchasePrice: mid, marketValue: mid, useMaxLoan: true };
-    const out = calculate(trial);
-    if (out.cashSurplus >= 0 && out.cpfSurplus >= 0) low = mid;
-    else high = mid;
+    if (calculate(trial).cashSurplus >= 0) low = mid; else high = mid;
   }
-  return low;
+  return Math.floor(low / 1000) * 1000;
 }
 
-function row(label, value, tone = "") {
-  return `<div class="row ${tone}"><span>${label}</span><strong>${value}</strong></div>`;
+function normalizeInput(input) {
+  return {
+    ...input,
+    incomeRecognition: Number(input.incomeRecognition),
+    incomeRecognition2: Number(input.incomeRecognition2),
+    residentialShare: Number(input.residentialShare)
+  };
+}
+
+function getInputs() {
+  const data = {};
+  for (const key of Object.keys(defaults)) {
+    const el = $(key);
+    if (!el) continue;
+    if (el.type === "checkbox") data[key] = el.checked;
+    else if (el.type === "number" || el.type === "range") data[key] = Number(el.value || 0);
+    else data[key] = el.value;
+  }
+  data.incomeRecognition /= 100;
+  data.incomeRecognition2 /= 100;
+  data.residentialShare /= 100;
+  data.actualInterestRate /= 100;
+  data.assessmentRate /= 100;
+  return normalizeInput(data);
+}
+
+function row(label, value, tone = "") { return `<div class="row ${tone}"><span>${label}</span><strong>${value}</strong></div>`; }
+function timeline(when, label, value, note = "") { return `<div class="timeline-row"><div><span>${when}</span><strong>${label}</strong>${note ? `<small>${note}</small>` : ""}</div><b>${value}</b></div>`; }
+function check(label, state, detail) { return `<div class="check-item ${state}"><span aria-hidden="true">${state === "pass" ? "✓" : state === "warn" ? "!" : "×"}</span><div><strong>${label}</strong><small>${detail}</small></div></div>`; }
+
+function financeCard(route, selected) {
+  const names = { bank: "Bank loan", hdb: "HDB loan", cash: "No loan" };
+  const pros = route.route === "hdb" ? "Stable concessionary rate; no early repayment penalty" : route.route === "bank" ? "Fixed or floating packages; available across residential types" : "No interest or mortgage approval";
+  const limits = route.route === "hdb" ? "HDB eligibility, income, age, lease and HFE rules" : route.route === "bank" ? "LTV, TDSR/MSR, credit checks, lock-ins and rate changes" : "Largest upfront funding requirement";
+  return `<article class="finance-card ${selected ? "selected" : ""} ${route.available ? "" : "unavailable"}"><div><span>${names[route.route]}</span><em>${route.status}</em></div><strong>${money(route.maximumLoan)}</strong><small>Maximum screening loan</small><dl><dt>Expected payment</dt><dd>${money(route.expectedPayment)}/mo</dd><dt>Useful because</dt><dd>${pros}</dd><dt>Watch for</dt><dd>${limits}</dd></dl></article>`;
+}
+
+function policyCard(title, value, description, href, source) {
+  return `<article class="policy-card"><span>${title}</span><strong>${value}</strong><p>${description}</p><a href="${href}" target="_blank" rel="noreferrer">${source} ↗</a></article>`;
 }
 
 function render() {
   const input = getInputs();
-  $("residentialShareReadout").textContent = `${Math.round(input.residentialShare * 100)}%`;
+  const output = calculate(input);
+  const ceiling = affordablePrice(input);
+  const comfortable = Math.floor(ceiling * .85 / 1000) * 1000;
+  document.body.classList.toggle("has-second-buyer", input.hasSecondBuyer);
+  document.body.classList.toggle("is-hdb", hdbTypes.has(input.propertyType));
+  document.body.classList.toggle("is-mixed", input.propertyType === "mixed");
+
   $("incomeRecognitionReadout").textContent = `${Math.round(input.incomeRecognition * 100)}%`;
   $("incomeRecognitionReadout2").textContent = `${Math.round(input.incomeRecognition2 * 100)}%`;
-  document.body.classList.toggle("has-second-buyer", input.hasSecondBuyer);
-  $("loanType").disabled = false;
-  const isHdb = isPublicHousing(input.propertyType);
-  if (!isHdb && input.loanType === "hdb") $("loanType").value = "bank";
-  if (input.propertyType !== "mixed") $("residentialShare").disabled = true;
-  else $("residentialShare").disabled = false;
-  if (input.incomeType === "fixed" && input.incomeRecognition < 1) {
-    $("incomeRecognitionReadout").textContent = `${Math.round(input.incomeRecognition * 100)}%`;
-  }
-
-  const output = calculate(getInputs());
-  const maxPrice = affordablePrice(getInputs());
-  const viable = output.cashSurplus >= 0 && output.cpfSurplus >= 0;
-  const loanTight = output.loan.loan < Math.min(output.loan.ltvCap, getInputs().desiredLoan || Infinity) - 1;
-
+  $("residentialShareReadout").textContent = `${Math.round(input.residentialShare * 100)}%`;
   $("usableCashPreview").textContent = money(output.cashPool);
-  $("usableCpfPreview").textContent = money(output.cpfPool);
-  document.querySelectorAll("[data-property]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.property === input.propertyType);
-  });
+  $("usableCpfPreview").textContent = money(output.cpfBalances);
+
+  document.querySelectorAll("[data-property]").forEach((button) => button.classList.toggle("active", button.dataset.property === input.propertyType));
   document.querySelectorAll("[data-loan]").forEach((button) => {
     button.classList.toggle("active", button.dataset.loan === input.loanType);
+    const assessed = output.routes[button.dataset.loan];
+    button.classList.toggle("unavailable", !assessed.available);
+    button.setAttribute("aria-pressed", String(button.dataset.loan === input.loanType));
   });
 
-  $("maxPrice").textContent = money(maxPrice);
-  $("totalNeed").textContent = money(output.totalUpfront);
+  $("maxPrice").textContent = money(ceiling);
+  $("maxPriceReason").textContent = output.selected.available ? "Policy and funding screening estimate" : output.selected.status;
+  $("totalNeed").textContent = money(output.totalOutlay);
   $("cashGap").textContent = money(Math.abs(output.cashSurplus));
   $("cashGap").className = output.cashSurplus >= 0 ? "positive" : "negative";
-  $("cashGapLabel").textContent = output.cashSurplus >= 0 ? "Surplus after required cash" : "Cash shortfall";
+  $("cashGapLabel").textContent = output.cashSurplus >= 0 ? "Cash remaining after buffer" : "Cash shortfall";
   $("cpfGap").textContent = money(Math.abs(output.cpfSurplus));
   $("cpfGap").className = output.cpfSurplus >= 0 ? "positive" : "negative";
-  $("cpfGapLabel").textContent = output.cpfSurplus >= 0 ? "Surplus after planned CPF use" : "CPF-OA shortfall";
-  $("overallStatus").textContent = viable ? "Likely feasible" : "Shortfall";
-  $("overallStatus").style.color = viable ? "#0f7a5f" : "#b64747";
+  $("cpfGapLabel").textContent = output.cpfSurplus >= 0 ? "Unused entered CPF and grants" : "CPF-OA shortfall";
+  $("comfortablePrice").textContent = money(comfortable);
+  $("screeningPrice").textContent = money(ceiling);
+  $("targetPrice").textContent = money(input.purchasePrice);
 
-  $("diagnosis").textContent = viable ? "This purchase clears the upfront checks" : "This purchase has an upfront funding gap";
-  $("diagnosisDetail").textContent = viable
-    ? `Estimated spare cash is ${money(output.cashSurplus)} and spare CPF-OA is ${money(output.cpfSurplus)} after buffers.`
-    : `You need ${money(Math.max(0, -output.cashSurplus))} more cash and ${money(Math.max(0, -output.cpfSurplus))} more CPF-OA, or a lower price / larger loan.`;
+  const viable = output.viable;
+  $("overallStatus").textContent = !output.selected.available ? output.selected.status : viable ? "Target clears screening" : "Funding gap found";
+  $("overallStatus").className = `status-pill ${!output.selected.available || !viable ? "warn" : "good"}`;
+  $("diagnosis").textContent = !output.selected.available ? "This route needs a different assessment" : viable ? "Your target clears the upfront screen" : "Your target has an upfront shortfall";
+  $("diagnosisDetail").textContent = !output.selected.available
+    ? output.selected.reason
+    : viable
+      ? `${money(output.cashSurplus)} cash remains after the selected buffers. Your screening ceiling is ${money(ceiling)}.`
+      : `The current plan needs ${money(Math.max(0, -output.cashSurplus))} more cash, a larger approved loan, or a lower target price.`;
 
   $("outlayRows").innerHTML = [
-    row("Purchase mode", input.hasSecondBuyer ? "2 buyers" : "1 buyer"),
-    row("Purchase price", money(input.purchasePrice)),
-    row("Maximum eligible loan used", money(output.loan.loan)),
-    row("Downpayment not covered by loan", money(output.downpayment)),
-    row("Minimum cash downpayment", money(output.minCashDown)),
-    row("CPF-OA applied to downpayment / BSD", money(output.cpfUsed)),
-    row("Renovation and move-in budget", money(output.renovation)),
-    row("Cash required after CPF use", money(output.cashRequired), output.cashSurplus < 0 ? "warn" : ""),
-    row("Cash available after buffer", money(output.cashPool)),
-    row("CPF-OA available after buffer", money(output.cpfPool))
+    timeline("At booking / option", "Minimum cash downpayment", money(output.minimumCashDown), output.selected.route === "bank" ? `${percent(output.selected.minCashRate)} of the lower price or value in this screen` : "No minimum cash portion modelled"),
+    timeline("At purchase", "Cash over valuation", money(output.cov), "Cannot be covered by the modelled loan or CPF"),
+    timeline("At purchase", "CPF-OA planned", money(output.cpfUsed), `${output.cpfLimit.note} Indicative grants included: ${money(output.grants.total)}.`),
+    timeline("At stamping", "BSD and ABSD", money(output.duty.total), `BSD ${money(output.duty.bsd)} · ABSD ${money(output.duty.absd)}`),
+    timeline("At completion", "Cash needed after loan and CPF", money(Math.max(0, output.cashRequired - output.reno)), "Includes purchase balance, duties, fees and any levy"),
+    timeline("After completion", "Renovation and move-in", money(output.reno), "Cash planning allowance"),
+    timeline("If applicable", "Indicative resale levy", money(output.levy), "Paid from cash or sale proceeds, not the new housing loan")
   ].join("");
-
   $("cashRequiredLabel").textContent = money(output.cashRequired);
   $("cpfRequiredLabel").textContent = money(output.cpfUsed);
   $("cashMeter").style.width = `${Math.min(100, output.cashRequired / Math.max(1, output.cashPool) * 100)}%`;
   $("cpfMeter").style.width = `${Math.min(100, output.cpfUsed / Math.max(1, output.cpfPool) * 100)}%`;
 
+  $("financeComparison").innerHTML = ["hdb", "bank", "cash"].map((key) => financeCard(output.routes[key], key === input.loanType)).join("");
   $("loanRows").innerHTML = [
-    row("LTV cap", money(output.loan.ltvCap)),
-    row("Gross household monthly income", money(output.household.monthlyIncome)),
-    row("Income recognised for assessment", money(output.loan.assessedIncome)),
-    row("Total monthly debt obligations", money(output.household.monthlyDebt)),
-    row("Loan servicing cap", money(output.loan.servicingCap), loanTight ? "warn" : ""),
-    row("Monthly repayment at stress rate", money(output.loan.payment)),
-    row("Monthly payment cap used", money(output.loan.paymentCap)),
-    row("Loan tenure", `${input.loanTenure} years`),
-    row("Stress rate", `${(input.interestRate * 100).toFixed(2)}%`)
+    row("Selected financing route", input.loanType === "hdb" ? "HDB loan" : input.loanType === "bank" ? "Bank loan" : "No loan"),
+    row("Loan base (lower price or value)", money(loanBase(input))),
+    row("LTV cap", `${percent(output.selected.ltv)} · ${money(output.selected.ltvCap)}`),
+    row("Servicing cap", money(output.selected.servicingCap)),
+    row("Maximum screening loan", money(output.selected.maximumLoan)),
+    row("Expected monthly instalment", money(output.selected.expectedPayment)),
+    row("Assessment monthly instalment", money(output.selected.assessedPayment)),
+    row("Tenure used", `${output.selected.tenure || 0} years`)
   ].join("");
-  $("loanNotice").textContent = `${output.loan.settings.reason}. TDSR is modelled at 55% of recognised monthly income less existing debts; MSR at 30% of recognised income is also applied for HDB and EC. Self-employed or variable income can be modelled by lowering the recognised income percentage.`;
+  $("loanNotice").textContent = `${output.selected.reason}. Expected instalment uses ${(output.selected.actualRate * 100).toFixed(2)}%; eligibility screening uses ${(output.selected.assessmentRate * 100).toFixed(2)}%. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
 
-  $("dutyRows").innerHTML = [
-    row("Stamp duty base", money(output.base)),
-    row("Buyer Stamp Duty", money(output.dutyBsd)),
-    row(`Additional Buyer Stamp Duty (${(absdRate(input) * 100).toFixed(0)}%)`, money(output.dutyAbsd), output.dutyAbsd > 0 ? "warn" : ""),
-    row("ABSD rate basis", input.hasSecondBuyer ? "Highest buyer profile applies" : "Buyer 1 profile"),
-    row("Total stamp duties", money(output.duties)),
-    row("Legal / valuation / admin fees", money(input.legalFees)),
-    row("Renovation budget", money(output.renovation))
+  $("policyRows").innerHTML = [
+    policyCard("Indicative housing grants", money(output.grants.total), `EHG ${money(output.grants.ehg)}, resale grant ${money(output.grants.resaleGrant)}, proximity grant ${money(output.grants.proximityGrant)}. Final eligibility comes from HFE.`, "https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility", "HDB grants and eligibility"),
+    policyCard("Indicative resale levy", money(output.levy), "Applies here only when a prior subsidised home and a new subsidised purchase are selected.", "https://www.hdb.gov.sg/buying-a-flat/bto-sbf-and-open-booking-of-flats/process-for-buying-a-new-flat/conditions-after-buying-a-new-flat?anchor=resale-levy", "HDB resale levy"),
+    policyCard("Buyer Stamp Duty", money(output.duty.bsd), "Residential and non-residential components use their respective marginal rates.", "https://www.iras.gov.sg/quick-links/tax-rates/stamp-duty", "IRAS stamp duty"),
+    policyCard(`ABSD · ${percent(absdRate(input))}`, money(output.duty.absd), "The highest joint-buyer profile applies; mixed property uses its residential component.", "https://www.iras.gov.sg/taxes/stamp-duty/for-property/buying-or-acquiring-property/additional-buyer%27s-stamp-duty-%28absd%29", "IRAS ABSD"),
+    policyCard("CPF housing limit", money(output.cpfLimit.limit), output.cpfLimit.note, "https://www.cpf.gov.sg/service/article/how-much-cpf-savings-can-i-use-for-my-property-purchase", "CPF Board housing use"),
+    policyCard("Policy freshness", POLICY_DATE, "Rules are stored in this static release and do not update automatically.", "https://www.hdb.gov.sg/residential/buying-a-flat/flat-and-grant-eligibility", "Check current HDB policy")
   ].join("");
 
-  $("eligibilityRows").innerHTML = eligibilityRows(input, output).join("");
-  $("eligibilityNotice").textContent = "Eligibility checks are screening indicators only. HDB flat/EC eligibility, grants, HFE outcomes, bank loan approval, CPF withdrawal limits and any ABSD remission depend on official application details and documentary assessment.";
-  updateMobileStep();
-}
-
-function eligibilityRows(input, output) {
-  const activeBuyers = buyers(input);
-  const hasSc = activeBuyers.some((buyer) => buyer.citizenship === "sc");
-  const hasOnlyScOrSpr = activeBuyers.every((buyer) => buyer.citizenship === "sc" || buyer.citizenship === "spr");
-  const anyExisting = activeBuyers.some((buyer) => buyer.ownedProperties > 0);
-  const householdIncome = output.household.monthlyIncome;
-  const rows = [
-    row("Buyer count", `${activeBuyers.length}`),
-    row("At least one Singapore Citizen", hasSc ? "Yes" : "No", hasSc ? "good" : "warn"),
-    row("Only SC / SPR buyers", hasOnlyScOrSpr ? "Yes" : "No", hasOnlyScOrSpr ? "good" : "warn")
-  ];
-  if (input.propertyType === "hdbBto" || input.propertyType === "hdbResale") {
-    rows.push(row("HDB citizenship screen", hasSc ? "Likely passes broad screen" : "Check HDB eligibility", hasSc ? "good" : "warn"));
-    rows.push(row("HFE required before purchase", "Yes"));
+  const eligibility = [];
+  eligibility.push(check("Financing route", output.selected.available ? "pass" : "fail", output.selected.reason));
+  eligibility.push(check("Upfront cash", output.cashSurplus >= 0 ? "pass" : "fail", output.cashSurplus >= 0 ? `${money(output.cashSurplus)} remains after buffer` : `${money(-output.cashSurplus)} shortfall after buffer`));
+  eligibility.push(check("Remaining lease", input.remainingLease >= 20 ? (leaseCoverage(input).coversTo95 ? "pass" : "warn") : "fail", output.cpfLimit.note));
+  eligibility.push(check("Citizenship and ABSD", absdRate(input) === 0 ? "pass" : "warn", absdRate(input) === 0 ? "No ABSD modelled" : `${percent(absdRate(input))} applied to the residential component`));
+  eligibility.push(check("Grant estimate", output.grants.total > 0 ? "warn" : "pass", output.grants.total > 0 ? "Indicative only; obtain HFE before relying on it" : "No unconfirmed grant is being relied on"));
+  if (buyers(input).some((buyer) => buyer.age >= 55 || buyer.properties > 0)) eligibility.push(check("CPF retirement set-asides", "warn", "BRS/FRS and second-property set-asides are not inferred from the OA balance; verify usable CPF directly."));
+  if (buyers(input).some((buyer) => buyer.incomeType !== "fixed")) eligibility.push(check("Variable income evidence", "warn", "Lenders assess tax, business and income records individually; the slider is a scenario only."));
+  if (input.propertyType === "landed" && buyers(input).some((buyer) => buyer.citizenship !== "sc")) eligibility.push(check("Landed-property approval", "warn", "Non-Singapore Citizens may require approval from the Singapore Land Authority."));
+  if (hdbTypes.has(input.propertyType)) {
+    eligibility.push(check("HDB property history", input.privatePropertyStatus === "none" || input.privatePropertyStatus === "cleared" ? "pass" : "fail", input.privatePropertyStatus === "recent" ? "A 30-month disposal period is screened; confirm the applicable flat classification and exceptions through HFE." : input.privatePropertyStatus === "current" ? "A current private-property interest generally prevents this HDB loan or grant screen." : "No current disqualifying private-property history was declared."));
+    eligibility.push(check("Prior HDB loans and MOP", Number(input.priorHdbLoans) < 2 && input.mopStatus !== "notMet" ? "pass" : "fail", `${input.priorHdbLoans} prior HDB concessionary loan(s) declared; MOP status: ${input.mopStatus === "na" ? "not applicable" : input.mopStatus === "met" ? "completed" : "not completed"}.`));
   }
-  if (input.propertyType === "ec") {
-    rows.push(row("EC citizenship screen", hasSc ? "Likely passes broad screen" : "Check EC eligibility", hasSc ? "good" : "warn"));
-    rows.push(row("EC household income screen", householdIncome <= 16000 ? "Within $16,000 default screen" : "Above $16,000 screen", householdIncome <= 16000 ? "good" : "warn"));
-  }
-  rows.push(row("Existing residential property impact", anyExisting ? "May affect ABSD, LTV and public housing eligibility" : "No existing-property flag"));
-  return rows;
+  if (!hdbTypes.has(input.propertyType) && input.mopStatus !== "na") eligibility.push(check("Current HDB MOP", input.mopStatus === "met" ? "pass" : "fail", input.mopStatus === "met" ? "Completed, based on your declaration." : "A further residential purchase is generally not available before completing the MOP."));
+  if (input.propertyType === "ec") eligibility.push(check("New EC income ceiling", output.hh.grossIncome <= 16000 ? "pass" : "fail", `${money(output.hh.grossIncome)} gross monthly household income entered against the $16,000 screen. Other EC scheme conditions still require HFE.`));
+  $("eligibilityRows").innerHTML = eligibility.join("");
+  $("eligibilityNotice").textContent = "This is a planning screen, not an approval. Family nucleus, first-timer status, prior subsidies, disposal waiting periods, MOP, credit assessment, ABSD remissions and exact CPF limits require official confirmation.";
 }
 
-function applyIncomePreset() {
-  setIncomeRecognition("incomeType", "incomeRecognition");
-}
-
-function applyIncomePreset2() {
-  setIncomeRecognition("incomeType2", "incomeRecognition2");
-}
-
-function setIncomeRecognition(typeId, recognitionId) {
-  const type = val(typeId);
-  if (type === "fixed") $(recognitionId).value = 100;
-  if (type === "selfEmployed") $(recognitionId).value = 70;
-  if (type === "commission") $(recognitionId).value = 80;
-}
-
-function applyRenovationPreset() {
-  const scope = val("renovationScope");
-  if (renovationRates[scope]) $("renoRate").value = renovationRates[scope];
+let currentStep = 0;
+function activeSteps() { return Array.from(document.querySelectorAll(".step-card")).filter((card) => card.id !== "buyer2Card" || $("hasSecondBuyer").checked); }
+function updateSteps() {
+  const steps = activeSteps();
+  currentStep = clamp(currentStep, 0, steps.length);
+  document.querySelectorAll(".step-card").forEach((card) => card.classList.remove("active"));
+  const atResults = currentStep === steps.length;
+  document.body.classList.toggle("results-ready", atResults);
+  if (!atResults) steps[currentStep].classList.add("active");
+  $("stepTitle").textContent = atResults ? "Review" : steps[currentStep].dataset.stepTitle;
+  $("stepCounter").textContent = atResults ? "Results" : `${currentStep + 1} of ${steps.length}`;
+  $("prevStep").disabled = currentStep === 0;
+  $("nextStep").textContent = currentStep >= steps.length - 1 ? "Show results" : "Next";
+  $("nextStep").hidden = atResults;
+  $("progressBar").style.width = `${(atResults ? 1 : (currentStep + 1) / steps.length) * 100}%`;
+  $("stepRail").innerHTML = steps.map((step, index) => `<button type="button" data-step="${index}" class="${index === currentStep ? "active" : ""}" aria-label="Go to ${step.dataset.stepTitle}"><span>${index + 1}</span>${step.dataset.stepTitle}</button>`).join("") + `<button type="button" data-step="${steps.length}" class="${atResults ? "active" : ""}" aria-label="Review results"><span>${steps.length + 1}</span>Review</button>`;
+  if (atResults && window.matchMedia("(max-width: 760px)").matches) $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function reset() {
   for (const [key, value] of Object.entries(defaults)) {
-    const element = $(key);
-    if (!element) continue;
-    if (element.type === "checkbox") element.checked = Boolean(value);
-    else element.value = value;
+    const el = $(key);
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = value;
+    else el.value = value;
   }
+  currentStep = 0;
   render();
+  updateSteps();
 }
 
-document.querySelectorAll("input, select").forEach((element) => {
-  element.addEventListener("input", render);
-  element.addEventListener("change", render);
-});
-
-document.querySelectorAll("[data-property]").forEach((button) => {
-  button.addEventListener("click", () => {
-    $("propertyType").value = button.dataset.property;
+function init() {
+  $("plannerForm").addEventListener("input", (event) => {
+    if (event.target.id === "incomeType" && event.target.value !== "fixed" && $("incomeRecognition").value === "100") $("incomeRecognition").value = "70";
+    if (event.target.id === "incomeType2" && event.target.value !== "fixed" && $("incomeRecognition2").value === "100") $("incomeRecognition2").value = "70";
+    if (event.target.id === "loanType") {
+      if (event.target.value === "hdb") { $("actualInterestRate").value = "2.6"; $("assessmentRate").value = "3.0"; }
+      if (event.target.value === "bank") { $("actualInterestRate").value = "3.0"; $("assessmentRate").value = "4.0"; }
+    }
     render();
+    updateSteps();
   });
-});
-
-document.querySelectorAll("[data-loan]").forEach((button) => {
-  button.addEventListener("click", () => {
+  document.querySelectorAll("[data-property]").forEach((button) => button.addEventListener("click", () => { $("propertyType").value = button.dataset.property; render(); }));
+  document.querySelectorAll("[data-loan]").forEach((button) => button.addEventListener("click", () => {
+    const input = getInputs();
+    if (!routeAssessment(input, button.dataset.loan).available && button.dataset.loan !== "cash") return;
     $("loanType").value = button.dataset.loan;
+    if (button.dataset.loan === "hdb") { $("actualInterestRate").value = "2.6"; $("assessmentRate").value = "3.0"; }
+    if (button.dataset.loan === "bank") { $("actualInterestRate").value = "3.0"; $("assessmentRate").value = "4.0"; }
     render();
-  });
-});
-
-$("incomeType").addEventListener("change", () => {
-  applyIncomePreset();
-  render();
-});
-
-$("incomeType2").addEventListener("change", () => {
-  applyIncomePreset2();
-  render();
-});
-
-$("renovationScope").addEventListener("change", () => {
-  applyRenovationPreset();
-  render();
-});
-
-document.querySelectorAll(".tab").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
+  }));
+  $("stepRail").addEventListener("click", (event) => { const button = event.target.closest("[data-step]"); if (!button) return; currentStep = Number(button.dataset.step); updateSteps(); });
+  $("prevStep").addEventListener("click", () => { currentStep -= 1; updateSteps(); });
+  $("nextStep").addEventListener("click", () => { currentStep += 1; updateSteps(); });
+  document.querySelectorAll(".tab").forEach((button) => button.addEventListener("click", () => {
+    document.querySelectorAll(".tab, .tab-panel").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
     $(button.dataset.tab).classList.add("active");
-  });
-});
-
-$("resetBtn").addEventListener("click", reset);
-$("printBtn").addEventListener("click", () => window.print());
-
-let mobileStep = 0;
-
-function activeMobileCards() {
-  return Array.from(document.querySelectorAll(".mobile-card")).filter((card) => {
-    return card.id !== "buyer2Card" || $("hasSecondBuyer").checked;
-  });
+  }));
+  $("resetBtn").addEventListener("click", reset);
+  $("printBtn").addEventListener("click", () => window.print());
+  reset();
 }
 
-function updateMobileStep() {
-  if (!$("prevStep")) return;
-  const cards = activeMobileCards();
-  mobileStep = Math.max(0, Math.min(mobileStep, cards.length));
-  document.querySelectorAll(".mobile-card").forEach((card) => card.classList.remove("active"));
-  document.querySelector(".app").classList.toggle("results-ready", mobileStep >= cards.length);
-  if (mobileStep < cards.length) cards[mobileStep].classList.add("active");
-  $("prevStep").disabled = mobileStep === 0;
-  $("nextStep").textContent = mobileStep >= cards.length - 1 ? "Show results" : "Next";
-  $("stepCounter").textContent = mobileStep >= cards.length ? "Results" : `${mobileStep + 1} of ${cards.length}`;
-}
-
-$("prevStep").addEventListener("click", () => {
-  mobileStep -= 1;
-  updateMobileStep();
-});
-
-$("nextStep").addEventListener("click", () => {
-  mobileStep += 1;
-  updateMobileStep();
-  if (mobileStep >= activeMobileCards().length) {
-    document.querySelector(".results").scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-});
-
-reset();
-updateMobileStep();
+if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", init);
+if (typeof module !== "undefined" && module.exports) module.exports = { defaults, marginalDuty, residentialBsd, nonResidentialBsd, household, absdRate, duties, grantEstimate, routeAssessment, cpfUsageLimit, calculate, affordablePrice, loanBase, stampBase };

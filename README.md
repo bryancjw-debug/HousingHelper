@@ -1,27 +1,47 @@
-# Housing Helper v1.1
+# Housing Helper v1.2
 
-Housing Helper is a browser-based Singapore property affordability calculator. It estimates cash and CPF-OA outlays, financing capacity, BSD/ABSD, renovation costs, and purchase shortfalls or surpluses for one or two buyers.
+A dependency-free Singapore home-purchase screening tool. It guides one or two buyers through household, income, funds, property, financing and move-in inputs before presenting affordability, outlay, financing and policy results.
 
-## Features
+## What v1.2 adds
 
-- One- or two-buyer household assessment
-- Separate buyer citizenship, income, debts, property ownership, cash and CPF-OA inputs
-- Self-employed and variable-income recognition assumptions
-- HDB, EC, private residential, landed and commercial property scenarios
-- Bank, HDB and cash financing routes
-- TDSR/MSR, LTV, BSD and ABSD estimates
-- Renovation and move-in budget planning
-- Guided mobile input flow and detailed desktop dashboard
-- Print-friendly results
+- One-card-at-a-time guided journey on desktop and mobile
+- Separate buyer profiles, property ownership and outstanding housing loans
+- Lower-of-price-or-valuation loan base and explicit cash-over-valuation
+- Separate expected mortgage and loan-assessment rates
+- HDB, bank and no-loan route comparison with unavailable-route guardrails
+- Screening price ceiling, 85% comfortable guide and target comparison
+- Cash and CPF-OA outlay timeline, renovation budget and protected buffers
+- Indicative EHG, resale grants, Proximity Housing Grant and resale levy
+- Residential, non-residential and mixed-use stamp duty treatment
+- CPF lease and housing-limit screening with retirement set-aside warnings
+- Source-dated policy cards linking to HDB, CPF Board and IRAS
 
-## Run Locally
+## Important limits
 
-Open `index.html` directly in a modern browser. No build step or server is required.
+Results are planning estimates, not an HFE letter, bank IPA, CPF withdrawal approval or tax advice. Scheme eligibility, family nucleus, income averaging, property-history waiting periods, remissions, lender credit policy and exact CPF BRS/FRS requirements require official confirmation.
 
-## Important
+Commercial and mixed-use financing is deliberately not estimated with residential LTV rules.
 
-This tool provides planning estimates, not financial, legal or tax advice. Final eligibility, financing, CPF usage, stamp duty treatment and public-housing outcomes depend on official assessment by HDB, CPF Board, IRAS, MAS and the selected lender.
+## Run locally
 
-## Version
+Open `index.html` in a modern browser. No server or build step is required.
 
-v1.1 focuses on a clearer input experience, progressive disclosure and improved visual hierarchy while preserving the v1.0 calculation model.
+## Verification
+
+With Node.js and Playwright available:
+
+```powershell
+node tests/calculations.test.js
+node tests/browser-check.js
+```
+
+The browser check uses the installed Google Chrome binary and verifies the guided flow, critical calculation output, second-buyer behavior, mobile results order, console errors and horizontal overflow.
+
+## Policy sources
+
+Policy basis last verified 14 September 2026:
+
+- HDB flat, grant and loan eligibility
+- CPF Board property-purchase usage guidance and calculator
+- IRAS BSD, ABSD and mixed-property guidance
+- MoneySense home-loan and affordability guidance
