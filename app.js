@@ -1,4 +1,4 @@
-const POLICY_DATE = "14 Sep 2026";
+const POLICY_DATE = "15 Sep 2026";
 const $ = (id) => document.getElementById(id);
 
 const defaults = {
@@ -385,7 +385,8 @@ function render() {
   const input = getInputs();
   const output = calculate(input);
   const ceiling = affordablePrice(input);
-  const comfortable = Math.floor(ceiling * .85 / 1000) * 1000;
+  const priceDelta = input.purchasePrice - ceiling;
+  const binding = output.selected.route === "cash" ? "No loan" : output.selected.ltvCap <= output.selected.servicingCap ? "LTV limit" : "Servicing limit";
   document.body.classList.toggle("has-second-buyer", input.hasSecondBuyer);
   document.body.classList.toggle("is-hdb", hdbTypes.has(input.propertyType));
   document.body.classList.toggle("is-mixed", input.propertyType === "mixed");
@@ -395,6 +396,8 @@ function render() {
   $("residentialShareReadout").textContent = `${Math.round(input.residentialShare * 100)}%`;
   $("usableCashPreview").textContent = money(output.cashPool);
   $("usableCpfPreview").textContent = money(output.cpfBalances);
+  const propertyNames = { hdbBto: "new HDB flat", hdbResale: "HDB resale flat", ec: "new EC", privateCondo: "private home", landed: "landed home", commercial: "commercial property", mixed: "mixed-use property" };
+  $("scenarioSummary").textContent = `${output.hh.buyers.length} buyer${output.hh.buyers.length > 1 ? "s" : ""} · ${propertyNames[input.propertyType]} · ${money(input.purchasePrice)} target · ${input.loanType === "bank" ? "bank loan" : input.loanType === "hdb" ? "HDB loan" : "no loan"}. All values remain editable.`;
 
   document.querySelectorAll("[data-property]").forEach((button) => button.classList.toggle("active", button.dataset.property === input.propertyType));
   document.querySelectorAll("[data-loan]").forEach((button) => {
@@ -406,16 +409,19 @@ function render() {
 
   $("maxPrice").textContent = money(ceiling);
   $("maxPriceReason").textContent = output.selected.available ? "Policy and funding screening estimate" : output.selected.status;
-  $("totalNeed").textContent = money(output.totalOutlay);
+  $("summaryTargetPrice").textContent = money(input.purchasePrice);
+  $("targetVsMax").textContent = priceDelta > 0 ? `${money(priceDelta)} above estimated maximum` : `${money(Math.abs(priceDelta))} below estimated maximum`;
   $("cashGap").textContent = money(Math.abs(output.cashSurplus));
   $("cashGap").className = output.cashSurplus >= 0 ? "positive" : "negative";
   $("cashGapLabel").textContent = output.cashSurplus >= 0 ? "Cash remaining after buffer" : "Cash shortfall";
-  $("cpfGap").textContent = money(Math.abs(output.cpfSurplus));
-  $("cpfGap").className = output.cpfSurplus >= 0 ? "positive" : "negative";
-  $("cpfGapLabel").textContent = output.cpfSurplus >= 0 ? "Unused entered CPF and grants" : "CPF-OA shortfall";
-  $("comfortablePrice").textContent = money(comfortable);
+  $("cpfGap").textContent = money(output.cpfUsed);
+  $("cpfGap").className = "cpf-value";
+  $("cpfGapLabel").textContent = `${money(output.cpfSurplus)} remains unallocated`;
   $("screeningPrice").textContent = money(ceiling);
   $("targetPrice").textContent = money(input.purchasePrice);
+  $("priceDifference").textContent = priceDelta > 0 ? `${money(priceDelta)} above estimate` : `${money(Math.abs(priceDelta))} below estimate`;
+  $("bindingConstraint").textContent = binding;
+  $("bindingDetail").textContent = binding === "LTV limit" ? `${money(output.selected.ltvCap)} LTV cap is lower` : binding === "Servicing limit" ? `${money(output.selected.servicingCap)} servicing cap is lower` : "Purchase is funded without a mortgage";
 
   const viable = output.viable;
   $("overallStatus").textContent = !output.selected.available ? output.selected.status : viable ? "Target clears screening" : "Funding gap found";
@@ -425,7 +431,7 @@ function render() {
     ? output.selected.reason
     : viable
       ? `${money(output.cashSurplus)} cash remains after the selected buffers. Your screening ceiling is ${money(ceiling)}.`
-      : `The current plan needs ${money(Math.max(0, -output.cashSurplus))} more cash, a larger approved loan, or a lower target price.`;
+      : `The entered target is ${money(Math.max(0, priceDelta))} above the estimated maximum and needs ${money(Math.max(0, -output.cashSurplus))} more upfront cash under these assumptions.`;
 
   $("outlayRows").innerHTML = [
     timeline("At booking / option", "Minimum cash downpayment", money(output.minimumCashDown), output.selected.route === "bank" ? `${percent(output.selected.minCashRate)} of the lower price or value in this screen` : "No minimum cash portion modelled"),
@@ -452,14 +458,14 @@ function render() {
     row("Assessment monthly instalment", money(output.selected.assessedPayment)),
     row("Tenure used", `${output.selected.tenure || 0} years`)
   ].join("");
-  $("loanNotice").textContent = `${output.selected.reason}. Expected instalment uses ${(output.selected.actualRate * 100).toFixed(2)}%; eligibility screening uses ${(output.selected.assessmentRate * 100).toFixed(2)}%. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
+  $("loanNotice").textContent = `${output.selected.reason}. The ${(output.selected.actualRate * 100).toFixed(2)}% expected rate is an editable planning assumption, not a lender quote. The ${(output.selected.assessmentRate * 100).toFixed(2)}% rate is used for eligibility screening. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
 
   $("policyRows").innerHTML = [
     policyCard("Indicative housing grants", money(output.grants.total), `EHG ${money(output.grants.ehg)}, resale grant ${money(output.grants.resaleGrant)}, proximity grant ${money(output.grants.proximityGrant)}. Final eligibility comes from HFE.`, "https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility", "HDB grants and eligibility"),
     policyCard("Indicative resale levy", money(output.levy), "Applies here only when a prior subsidised home and a new subsidised purchase are selected.", "https://www.hdb.gov.sg/buying-a-flat/bto-sbf-and-open-booking-of-flats/process-for-buying-a-new-flat/conditions-after-buying-a-new-flat?anchor=resale-levy", "HDB resale levy"),
     policyCard("Buyer Stamp Duty", money(output.duty.bsd), "Residential and non-residential components use their respective marginal rates.", "https://www.iras.gov.sg/quick-links/tax-rates/stamp-duty", "IRAS stamp duty"),
     policyCard(`ABSD · ${percent(absdRate(input))}`, money(output.duty.absd), "The highest joint-buyer profile applies; mixed property uses its residential component.", "https://www.iras.gov.sg/taxes/stamp-duty/for-property/buying-or-acquiring-property/additional-buyer%27s-stamp-duty-%28absd%29", "IRAS ABSD"),
-    policyCard("CPF housing limit", money(output.cpfLimit.limit), output.cpfLimit.note, "https://www.cpf.gov.sg/service/article/how-much-cpf-savings-can-i-use-for-my-property-purchase", "CPF Board housing use"),
+    policyCard("CPF housing limit", money(output.cpfLimit.limit), `${output.cpfLimit.note} The current plan uses ${money(output.cpfUsed)}; BRS/FRS set-asides may still apply for a subsequent property.`, "https://www.cpf.gov.sg/service/article/how-much-cpf-savings-can-i-use-for-my-property-purchase", "CPF Board housing use"),
     policyCard("Policy freshness", POLICY_DATE, "Rules are stored in this static release and do not update automatically.", "https://www.hdb.gov.sg/residential/buying-a-flat/flat-and-grant-eligibility", "Check current HDB policy")
   ].join("");
 
@@ -542,6 +548,7 @@ function init() {
     $(button.dataset.tab).classList.add("active");
   }));
   $("resetBtn").addEventListener("click", reset);
+  $("editBtn").addEventListener("click", () => { currentStep = Math.max(0, activeSteps().length - 1); updateSteps(); $("plannerForm").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("printBtn").addEventListener("click", () => window.print());
   reset();
 }

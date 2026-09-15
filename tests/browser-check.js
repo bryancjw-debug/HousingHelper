@@ -11,7 +11,7 @@ const assert = require("node:assert/strict");
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(url);
 
-  assert.equal(await page.title(), "Housing Helper v1.2");
+  assert.equal(await page.title(), "Housing Helper v1.3");
   assert.equal(await page.locator(".step-card:visible").count(), 1, "one input card is visible on desktop");
   assert.equal(await page.locator("#stepCounter").textContent(), "1 of 6");
 
@@ -43,7 +43,9 @@ const assert = require("node:assert/strict");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `no page overflow at ${width}px`);
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.screenshot({ path: path.resolve(__dirname, "../housing-helper-v1.2-desktop.png"), fullPage: true });
+  await page.reload();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: path.resolve(__dirname, "../housing-helper-v1.3-desktop.png"), fullPage: true });
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   mobile.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -54,8 +56,11 @@ const assert = require("node:assert/strict");
   for (let i = 0; i < 6; i += 1) await mobile.locator("#nextStep").click();
   assert.equal(await mobile.locator("#stepCounter").textContent(), "Results");
   assert.equal(await mobile.locator(".results").isVisible(), true);
+  assert.equal(await mobile.locator(".inputs").isVisible(), false, "completed mobile quiz yields to the results");
   assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth), 390, "mobile page has no horizontal overflow");
-  await mobile.screenshot({ path: path.resolve(__dirname, "../housing-helper-v1.2-mobile.png"), fullPage: true });
+  await mobile.screenshot({ path: path.resolve(__dirname, "../housing-helper-v1.3-mobile.png"), fullPage: true });
+  await mobile.locator("#editBtn").click();
+  assert.equal(await mobile.locator(".inputs").isVisible(), true, "mobile results can return to editable answers");
 
   assert.deepEqual(errors, [], `browser console errors: ${errors.join(" | ")}`);
   await browser.close();

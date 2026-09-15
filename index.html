@@ -4,21 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A guided Singapore home affordability and purchase outlay estimator.">
-  <title>Housing Helper v1.2</title>
-  <link rel="stylesheet" href="styles.css?v=1.2.0">
+  <title>Housing Helper v1.3</title>
+  <link rel="stylesheet" href="styles.css?v=1.3.0">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
-      <div><p class="eyebrow">Singapore home purchase planner</p><h1>Housing Helper <span>v1.2</span></h1></div>
+      <div><p class="eyebrow">Singapore home purchase planner</p><h1>Housing Helper <span>v1.3</span></h1><p class="topbar-copy">A guided estimate of your purchase limit, upfront cash and CPF-OA use.</p></div>
       <div class="status-pill" id="overallStatus">Start your check</div>
     </header>
 
-    <section class="summary-grid" aria-label="Purchase summary">
-      <article class="summary-card accent"><span>Screening price ceiling</span><strong id="maxPrice">$0</strong><small id="maxPriceReason">Complete the guided check</small></article>
-      <article class="summary-card"><span>Target purchase outlay</span><strong id="totalNeed">$0</strong><small>Property, duties, fees and move-in</small></article>
+    <section class="summary-grid" aria-label="Live purchase summary">
+      <article class="summary-card accent"><span>Estimated maximum price</span><strong id="maxPrice">$0</strong><small id="maxPriceReason">Complete the guided check</small></article>
+      <article class="summary-card"><span>Target price</span><strong id="summaryTargetPrice">$0</strong><small id="targetVsMax">Compared with your estimated maximum</small></article>
       <article class="summary-card"><span>Cash position</span><strong id="cashGap">$0</strong><small id="cashGapLabel">Available after planned outlays</small></article>
-      <article class="summary-card"><span>CPF-OA position</span><strong id="cpfGap">$0</strong><small id="cpfGapLabel">Available after planned use</small></article>
+      <article class="summary-card"><span>CPF-OA planned</span><strong id="cpfGap">$0</strong><small id="cpfGapLabel">From available CPF and grants</small></article>
     </section>
 
     <section class="workspace">
@@ -27,6 +27,7 @@
           <div><p class="panel-kicker">Guided check</p><h2 id="stepTitle">Household</h2></div>
           <button type="button" class="icon-button" id="resetBtn" title="Reset sample profile" aria-label="Reset sample profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg></button>
         </div>
+        <div class="scenario-note"><span>Loaded example</span><p id="scenarioSummary">One buyer planning a private-home purchase.</p></div>
         <nav class="step-rail" id="stepRail" aria-label="Planner steps"></nav>
         <div class="step-progress"><span id="progressBar"></span></div>
 
@@ -130,18 +131,18 @@
       </form>
 
       <section class="panel results" id="results" aria-label="Affordability results">
-        <div class="panel-head"><div><p class="panel-kicker">Your screening result</p><h2>Purchase picture</h2></div><button type="button" class="icon-button" id="printBtn" title="Print or save as PDF" aria-label="Print or save as PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg></button></div>
+        <div class="panel-head"><div><p class="panel-kicker">Your screening result</p><h2>Purchase picture</h2></div><div class="panel-tools"><button type="button" class="icon-button edit-button" id="editBtn" title="Edit answers" aria-label="Edit answers"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg></button><button type="button" class="icon-button" id="printBtn" title="Print or save as PDF" aria-label="Print or save as PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg></button></div></div>
         <div class="scoreboard"><div class="score-visual" aria-hidden="true"><img src="assets/housing-helper-illustration.png" alt=""></div><div><p class="eyebrow">Purchase diagnosis</p><h3 id="diagnosis">Calculating...</h3><p id="diagnosisDetail"></p></div></div>
-        <div class="result-metrics"><div><span>Comfortable guide</span><strong id="comfortablePrice">$0</strong></div><div><span>Screening ceiling</span><strong id="screeningPrice">$0</strong></div><div><span>Your target</span><strong id="targetPrice">$0</strong></div></div>
+        <div class="result-metrics"><div><span>Estimated maximum</span><strong id="screeningPrice">$0</strong><small>Policy and funding screen</small></div><div><span>Your target</span><strong id="targetPrice">$0</strong><small id="priceDifference">Difference from maximum</small></div><div><span>Binding loan check</span><strong id="bindingConstraint">-</strong><small id="bindingDetail">Based on selected route</small></div></div>
         <div class="tabs" role="tablist" aria-label="Result views"><button type="button" class="tab active" data-tab="outlay">Outlay</button><button type="button" class="tab" data-tab="financing">Financing</button><button type="button" class="tab" data-tab="policies">Policies</button><button type="button" class="tab" data-tab="eligibility">Checks</button></div>
         <div class="tab-panel active" id="outlay"><div class="timeline" id="outlayRows"></div><div class="meter-block"><div class="meter-label"><span>Cash required</span><strong id="cashRequiredLabel">$0</strong></div><div class="meter"><span id="cashMeter"></span></div><div class="meter-label"><span>CPF-OA planned</span><strong id="cpfRequiredLabel">$0</strong></div><div class="meter cpf"><span id="cpfMeter"></span></div></div></div>
         <div class="tab-panel" id="financing"><div class="finance-comparison" id="financeComparison"></div><div class="breakdown" id="loanRows"></div><div class="notice" id="loanNotice"></div></div>
         <div class="tab-panel" id="policies"><div class="policy-grid" id="policyRows"></div></div>
         <div class="tab-panel" id="eligibility"><div class="check-list" id="eligibilityRows"></div><div class="notice" id="eligibilityNotice"></div></div>
-        <div class="sources"><strong>Policy basis verified 14 Sep 2026.</strong> Screening estimates only. Confirm HDB eligibility and grants through an HFE letter, CPF use through CPF Board, duties through IRAS, and financing through the lender's IPA and property loan fact sheet.</div>
+        <div class="sources"><strong>Policy basis reviewed 15 Sep 2026.</strong> Official rules are separated from editable assumptions. Confirm HDB eligibility and grants through an HFE letter, CPF use through CPF Board, duties through IRAS, and financing through the lender's IPA and property loan fact sheet.</div>
       </section>
     </section>
   </main>
-  <script src="app.js?v=1.2.0"></script>
+  <script src="app.js?v=1.3.0"></script>
 </body>
 </html>

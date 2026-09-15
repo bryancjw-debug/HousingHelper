@@ -68,4 +68,13 @@ assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: 
 assert.equal(hh.calculate(input({ propertyType: "hdbBto", priorSubsidised: "4room" })).levy, 40000, "fixed family resale levy screening");
 assert.ok(hh.affordablePrice(input()) > 0, "affordability search returns a usable ceiling");
 
+const defaultResult = hh.calculate(input());
+assert.equal(defaultResult.duty.bsd, 32600, "default $1.2m residential BSD reconciles to IRAS bands");
+assert.equal(defaultResult.duty.absd, 0, "default SC first-property profile has no ABSD");
+assert.equal(defaultResult.selected.loan, 900000, "default bank loan is capped at 75% LTV");
+assert.equal(defaultResult.cpfUsed, 160000, "default CPF use preserves the entered $20k OA buffer");
+assert.equal(defaultResult.cashRequired, 237600, "default cash requirement includes duties, fees and renovation");
+assert.equal(defaultResult.cashSurplus, -67600, "default profile shows the exact upfront cash shortfall");
+assert.equal(hh.affordablePrice(input()), 965000, "default estimated maximum price remains reproducible");
+
 console.log("Housing Helper calculation tests passed");
