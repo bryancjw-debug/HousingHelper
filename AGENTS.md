@@ -25,6 +25,15 @@ Confirmed 15 September 2026:
 - Let facts and figures lead. Use generated imagery sparingly and only when it supports orientation, an empty state or the overall housing context.
 - Prefer actionable explanations of trade-offs over unexplained pass/fail labels or a single opaque affordability number.
 
+Confirmed 16 September 2026:
+
+- Start the guided journey with the property goal, then progressively collect buyer, income, funds, financing, grant and move-in information.
+- During the quiz, keep a compact floating affordability card showing maximum loan, estimated maximum property price, cash position and the binding constraint. Reserve full analytics for the final results view.
+- Use property-specific illustrative starting prices and update them when the property type changes, while preserving values the user has manually edited.
+- Present renovation scopes as visible choices with their assumed rates, inclusions and live estimated totals; reveal custom inputs only when relevant.
+- Show only housing grants relevant to the selected property and application profile. Let users choose whether to include an indicative grant and never imply HFE confirmation.
+- The default example is a first-timer single applicant aged 35, earning $8,000 monthly with no monthly debt, $100,000 cash and $120,000 CPF-OA, considering an HDB BTO/SBF flat.
+
 ## Shared Design Language
 
 - Follow the shared finance-app hierarchy used by CommonCents and RetirementReadiness: neutral input surfaces, visible card boundaries, semantic accents, persistent labels and obvious selected states.

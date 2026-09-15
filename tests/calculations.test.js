@@ -60,21 +60,29 @@ assert.equal(hdb.assessmentRate, .03, "HDB assessment rate is distinct");
 assert.equal(hh.routeAssessment(input({ propertyType: "hdbResale", monthlyIncome: 6000, loanTenure: 25, buyerAge: 50 }), "hdb").tenure, 15, "HDB tenure is capped by average buyer age");
 assert.equal(hh.cpfUsageLimit(input({ propertyType: "hdbResale", remainingLease: 19 }), "hdb").limit, 0, "CPF screen blocks leases below 20 years");
 
-const grants = hh.grantEstimate(input({ propertyType: "hdbResale", purchasePrice: 500000, marketValue: 500000, monthlyIncome: 6000, monthlyDebt: 0, flatSize: "small", proximity: "near" }));
+const grants = hh.grantEstimate(input({ applicantProfile: "family", propertyType: "hdbResale", purchasePrice: 500000, marketValue: 500000, monthlyIncome: 6000, monthlyDebt: 0, flatSize: "small", proximity: "near", includeEhg: true, includeResaleGrant: true, includeProximityGrant: true }));
 assert.equal(grants.ehg, 50000, "indicative EHG schedule");
 assert.equal(grants.resaleGrant, 80000, "indicative resale grant");
 assert.equal(grants.proximityGrant, 20000, "indicative proximity grant");
-assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: "hdbBto", monthlyIncome: 5000 })).ehg, 0, "solo EHG ceiling is screened separately");
-assert.equal(hh.calculate(input({ propertyType: "hdbBto", priorSubsidised: "4room" })).levy, 40000, "fixed family resale levy screening");
+assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: "hdbBto", monthlyIncome: 4000, includeEhg: true })).ehg, 10000, "solo EHG uses the sole-recipient income schedule");
+assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: "hdbBto", monthlyIncome: 5000, includeEhg: true })).ehg, 0, "solo EHG ceiling is screened separately");
+assert.equal(hh.calculate(input({ applicantProfile: "family", propertyType: "hdbBto", priorSubsidised: "4room" })).levy, 40000, "fixed family resale levy screening");
 assert.ok(hh.affordablePrice(input()) > 0, "affordability search returns a usable ceiling");
 
 const defaultResult = hh.calculate(input());
-assert.equal(defaultResult.duty.bsd, 32600, "default $1.2m residential BSD reconciles to IRAS bands");
+assert.equal(defaultResult.duty.bsd, 3200, "default $250k residential BSD reconciles to IRAS bands");
 assert.equal(defaultResult.duty.absd, 0, "default SC first-property profile has no ABSD");
-assert.equal(defaultResult.selected.loan, 900000, "default bank loan is capped at 75% LTV");
-assert.equal(defaultResult.cpfUsed, 160000, "default CPF use preserves the entered $20k OA buffer");
-assert.equal(defaultResult.cashRequired, 237600, "default cash requirement includes duties, fees and renovation");
-assert.equal(defaultResult.cashSurplus, -67600, "default profile shows the exact upfront cash shortfall");
-assert.equal(hh.affordablePrice(input()), 965000, "default estimated maximum price remains reproducible");
+assert.equal(defaultResult.selected.loan, 187500, "default HDB loan is capped at 75% LTV");
+assert.equal(defaultResult.cpfUsed, 69200, "default CPF use preserves the entered $20k OA buffer");
+assert.equal(defaultResult.cashRequired, 25000, "default cash requirement includes the light renovation allowance");
+assert.equal(defaultResult.cashSurplus, 25000, "default profile shows the exact upfront cash surplus");
+assert.equal(hh.affordablePrice(input()), 453000, "default estimated maximum price remains reproducible");
+assert.equal(hh.calculate({ ...input(), purchasePrice: 453000, marketValue: 453000, useMaxLoan: true }).selected.loan, 339750, "maximum affordable price translates to its corresponding maximum usable loan");
+assert.deepEqual(Object.fromEntries(Object.entries(hh.propertyPresets).map(([key, value]) => [key, value.price])), { hdbBto: 250000, hdbResale: 550000, ec: 1300000, privateCondo: 1500000, landed: 3500000, commercial: 1000000, mixed: 2000000 }, "every property type has a distinct starting price");
+
+const grantFunded = hh.calculate(input({ applicantProfile: "single", propertyType: "hdbResale", purchasePrice: 500000, marketValue: 500000, monthlyIncome: 4000, flatSize: "small", proximity: "near", includeEhg: true, includeResaleGrant: true, includeProximityGrant: true, cpfAvailable: 0, cpfBuffer: 0 }));
+assert.equal(grantFunded.grantUsed, 60000, "selected single grants are applied to the housing payment");
+assert.equal(grantFunded.cpfBalanceUsed, 0, "grant use remains separate from CPF-OA use");
+assert.ok(grantFunded.cashRequired >= grantFunded.duty.total + grantFunded.reno, "housing grants do not pay stamp duty or renovation in the funding waterfall");
 
 console.log("Housing Helper calculation tests passed");

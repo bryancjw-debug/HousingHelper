@@ -1,8 +1,17 @@
-# Housing Helper v1.3
+# Housing Helper v1.4
 
 A dependency-free Singapore home-purchase screening tool. It guides one or two buyers through household, income, funds, property, financing and move-in inputs before presenting affordability, outlay, financing and policy results.
 
-## What v1.3 adds
+## What v1.4 adds
+
+- A property-first quiz with a compact live affordability card and a separate final analytics view.
+- Requested single-applicant defaults plus property-specific illustrative price and floor-area presets.
+- Clearly separated maximum-loan and maximum-property-price estimates.
+- Conditional, user-selected HDB grant scenarios with a grant-specific funding waterfall.
+- Visible light, standard, premium and custom renovation assumptions with live totals.
+- Explicit distinction between a financially workable plan and a property-eligibility issue.
+
+## What v1.3 added
 
 - A clearer distinction between official policy rules and editable planning assumptions.
 - A transparent loaded-example summary and a direct target-versus-maximum comparison.
