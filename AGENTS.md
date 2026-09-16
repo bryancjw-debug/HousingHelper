@@ -27,12 +27,14 @@ Confirmed 15 September 2026:
 
 Confirmed 16 September 2026:
 
-- Start the guided journey with the property goal, then progressively collect buyer, income, funds, financing, grant and move-in information.
+- Start the guided journey with buyers, income and funds before asking for the property goal, then collect financing, grant and move-in information.
 - During the quiz, keep a compact floating affordability card showing maximum loan, estimated maximum property price, cash position and the binding constraint. Reserve full analytics for the final results view.
 - Use property-specific illustrative starting prices and update them when the property type changes, while preserving values the user has manually edited.
 - Present renovation scopes as visible choices with their assumed rates, inclusions and live estimated totals; reveal custom inputs only when relevant.
 - Show only housing grants relevant to the selected property and application profile. Let users choose whether to include an indicative grant and never imply HFE confirmation.
 - The default example is a first-timer single applicant aged 35, earning $8,000 monthly with no monthly debt, $100,000 cash and $120,000 CPF-OA, considering an HDB BTO/SBF flat.
+- When maximum property price stops increasing with income, explain the active constraint clearly; income affects affordability only until servicing capacity is no longer the binding limit.
+- Keep actual mortgage rates and eligibility stress-test rates visually and mathematically separate. Monthly repayment figures must use the actual-rate assumption and state that rate explicitly.
 
 ## Shared Design Language
 

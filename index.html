@@ -25,29 +25,14 @@
     <section class="workspace">
       <form class="panel inputs" id="plannerForm" novalidate>
         <div class="panel-head">
-          <div><p class="panel-kicker">Guided check</p><h2 id="stepTitle">Property</h2></div>
+          <div><p class="panel-kicker">Guided check</p><h2 id="stepTitle">Buyers</h2></div>
           <button type="button" class="icon-button" id="resetBtn" title="Reset sample profile" aria-label="Reset sample profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg></button>
         </div>
         <div class="scenario-note"><span>Your scenario</span><p id="scenarioSummary">One buyer planning an HDB purchase.</p></div>
         <nav class="step-rail" id="stepRail" aria-label="Planner steps"></nav>
         <div class="step-progress"><span id="progressBar"></span></div>
 
-        <fieldset class="step-card active" data-step-title="Property">
-          <legend>What are you hoping to buy?</legend>
-          <p class="section-copy wide">Choose a property type to load an illustrative starting price. Replace it with the actual listing or expected price when you have one.</p>
-          <div class="choice-grid property-choices wide" role="group" aria-label="Property type shortcuts"><button type="button" data-property="hdbBto">New HDB</button><button type="button" data-property="hdbResale">HDB resale</button><button type="button" data-property="ec">New EC</button><button type="button" data-property="privateCondo">Private</button><button type="button" data-property="landed">Landed</button><button type="button" data-property="commercial">Commercial</button></div>
-          <label>Property type<select id="propertyType"><option value="hdbBto">HDB BTO / SBF</option><option value="hdbResale">HDB resale flat</option><option value="ec">New executive condominium</option><option value="privateCondo">Private condominium / apartment</option><option value="landed">Landed residential</option><option value="commercial">Commercial / industrial</option><option value="mixed">Mixed commercial and residential</option></select></label>
-          <label class="hdb-field">Flat size<select id="flatSize"><option value="small">2- to 4-room</option><option value="large">5-room or larger</option></select></label>
-          <label>Expected purchase price<input id="purchasePrice" type="number" min="0" step="1000" value="250000"><small id="pricePresetNote">Illustrative starting value for this property type.</small></label>
-          <label>Market valuation<input id="marketValue" type="number" min="0" step="1000" value="250000"><small>Loans and CPF generally use the lower price or valuation.</small></label>
-          <label>Remaining lease at purchase<input id="remainingLease" type="number" min="0" max="999" step="1" value="99"><small>Years. Use 999 for freehold.</small></label>
-          <label class="mixed-field">Residential value share<input id="residentialShare" type="range" min="0" max="100" step="5" value="100"><span class="range-readout" id="residentialShareReadout">100%</span></label>
-          <label class="hdb-field">Prior HDB concessionary loans<select id="priorHdbLoans"><option value="0">None</option><option value="1">One</option><option value="2">Two or more</option></select></label>
-          <label class="hdb-field">Private-property history<select id="privatePropertyStatus"><option value="none">None</option><option value="current">Currently own an interest</option><option value="recent">Disposed within the last 30 months</option><option value="cleared">Disposed more than 30 months ago</option></select></label>
-          <label>Current HDB minimum occupation period<select id="mopStatus"><option value="na">Not applicable</option><option value="met">Completed</option><option value="notMet">Not completed</option></select></label>
-        </fieldset>
-
-        <fieldset class="step-card" data-step-title="Buyers">
+        <fieldset class="step-card active" data-step-title="Buyers">
           <legend>Who is buying?</legend>
           <p class="section-copy wide">We use each buyer's citizenship, age and property count separately. Shared resources are combined only in the result.</p>
           <label class="check-row wide"><input id="hasSecondBuyer" type="checkbox"> Purchase with a second buyer</label>
@@ -103,14 +88,29 @@
           <label class="buyer2-input">Net sale proceeds<input id="saleProceeds2" type="number" min="0" step="1000" value="0"></label>
         </fieldset>
 
+        <fieldset class="step-card" data-step-title="Property">
+          <legend>What are you hoping to buy?</legend>
+          <p class="section-copy wide">Your profile and resources have shaped the live range. Now choose a property type and replace the illustrative price with an actual listing when you have one.</p>
+          <div class="choice-grid property-choices wide" role="group" aria-label="Property type shortcuts"><button type="button" data-property="hdbBto">New HDB</button><button type="button" data-property="hdbResale">HDB resale</button><button type="button" data-property="ec">New EC</button><button type="button" data-property="privateCondo">Private</button><button type="button" data-property="landed">Landed</button><button type="button" data-property="commercial">Commercial</button></div>
+          <label>Property type<select id="propertyType"><option value="hdbBto">HDB BTO / SBF</option><option value="hdbResale">HDB resale flat</option><option value="ec">New executive condominium</option><option value="privateCondo">Private condominium / apartment</option><option value="landed">Landed residential</option><option value="commercial">Commercial / industrial</option><option value="mixed">Mixed commercial and residential</option></select></label>
+          <label class="hdb-field">Flat size<select id="flatSize"><option value="small">2- to 4-room</option><option value="large">5-room or larger</option></select></label>
+          <label>Expected purchase price<input id="purchasePrice" type="number" min="0" step="1000" value="250000"><small id="pricePresetNote">Illustrative starting value for this property type.</small></label>
+          <label>Market valuation<input id="marketValue" type="number" min="0" step="1000" value="250000"><small>Loans and CPF generally use the lower price or valuation.</small></label>
+          <label>Remaining lease at purchase<input id="remainingLease" type="number" min="0" max="999" step="1" value="99"><small>Years. Use 999 for freehold.</small></label>
+          <label class="mixed-field">Residential value share<input id="residentialShare" type="range" min="0" max="100" step="5" value="100"><span class="range-readout" id="residentialShareReadout">100%</span></label>
+          <label class="hdb-field">Prior HDB concessionary loans<select id="priorHdbLoans"><option value="0">None</option><option value="1">One</option><option value="2">Two or more</option></select></label>
+          <label class="hdb-field">Private-property history<select id="privatePropertyStatus"><option value="none">None</option><option value="current">Currently own an interest</option><option value="recent">Disposed within the last 30 months</option><option value="cleared">Disposed more than 30 months ago</option></select></label>
+          <label>Current HDB minimum occupation period<select id="mopStatus"><option value="na">Not applicable</option><option value="met">Completed</option><option value="notMet">Not completed</option></select></label>
+        </fieldset>
+
         <fieldset class="step-card" data-step-title="Financing">
           <legend>Financing route</legend>
           <p class="section-copy wide">Compare an HDB concessionary loan, bank loan and no-loan route. Unsupported routes are shown as unavailable rather than silently substituted.</p>
           <div class="choice-grid finance-choices wide" role="group" aria-label="Financing route shortcuts"><button type="button" data-loan="bank">Bank loan</button><button type="button" data-loan="hdb">HDB loan</button><button type="button" data-loan="cash">No loan</button></div>
           <label>Selected route<select id="loanType"><option value="bank">Bank / financial institution loan</option><option value="hdb">HDB housing loan</option><option value="cash">No loan</option></select></label>
           <label>Preferred tenure<input id="loanTenure" type="number" min="1" max="35" step="1" value="25"></label>
-          <label>Expected mortgage rate<input id="actualInterestRate" type="number" min="0" step="0.05" value="2.6"><small>Used for the expected monthly instalment.</small></label>
-          <label>Assessment rate<input id="assessmentRate" type="number" min="0" step="0.05" value="3.0"><small>Used only for servicing-cap screening.</small></label>
+          <label><span class="label-heading">Actual mortgage rate <span class="rate-tag">Repayment</span></span><input id="actualInterestRate" type="number" min="0" step="0.05" value="2.6"><small>Your estimated monthly repayment is calculated at this rate.</small></label>
+          <label><span class="label-heading">Eligibility stress-test rate <span class="help-tooltip" tabindex="0" aria-describedby="assessmentRateTip">i<span class="tooltip-content" id="assessmentRateTip" role="tooltip">This is not the rate charged on your loan. It is used only to test loan eligibility: 3% for an HDB loan and at least 4% for a residential bank loan under the current screening assumptions.</span></span></span><input id="assessmentRate" type="number" min="3" step="0.05" value="3.0"><small>Used only to estimate the maximum loan, not your monthly repayment.</small></label>
           <details class="advanced wide"><summary>Advanced loan preference</summary><div class="advanced-grid"><label>Desired loan amount<input id="desiredLoan" type="number" min="0" step="1000" value="187500"></label><label class="check-row"><input id="useMaxLoan" type="checkbox" checked> Use maximum screening loan</label></div></details>
         </fieldset>
 

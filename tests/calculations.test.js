@@ -57,6 +57,8 @@ assert.equal(hdb.available, true, "qualifying HDB profile is screened");
 assert.equal(hdb.ltv, .75, "current HDB full-lease LTV is 75%");
 assert.equal(hdb.actualRate, .026, "HDB expected rate is distinct");
 assert.equal(hdb.assessmentRate, .03, "HDB assessment rate is distinct");
+assert.equal(hh.routeAssessment(input({ propertyType: "privateCondo", loanType: "bank", assessmentRate: .03 }), "bank").assessmentRate, .04, "bank eligibility assessment enforces the 4% residential floor");
+assert.equal(hh.routeAssessment(input({ propertyType: "privateCondo", loanType: "bank", assessmentRate: .045 }), "bank").assessmentRate, .045, "a higher bank eligibility assessment is preserved");
 assert.equal(hh.routeAssessment(input({ propertyType: "hdbResale", monthlyIncome: 6000, loanTenure: 25, buyerAge: 50 }), "hdb").tenure, 15, "HDB tenure is capped by average buyer age");
 assert.equal(hh.cpfUsageLimit(input({ propertyType: "hdbResale", remainingLease: 19 }), "hdb").limit, 0, "CPF screen blocks leases below 20 years");
 
@@ -66,6 +68,7 @@ assert.equal(grants.resaleGrant, 80000, "indicative resale grant");
 assert.equal(grants.proximityGrant, 20000, "indicative proximity grant");
 assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: "hdbBto", monthlyIncome: 4000, includeEhg: true })).ehg, 10000, "solo EHG uses the sole-recipient income schedule");
 assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: "hdbBto", monthlyIncome: 5000, includeEhg: true })).ehg, 0, "solo EHG ceiling is screened separately");
+assert.equal(hh.grantEstimate(input({ applicantProfile: "single", propertyType: "hdbResale", monthlyIncome: 7500, includeResaleGrant: true })).resaleGrant, 40000, "updated single resale-grant ceiling is applied");
 assert.equal(hh.calculate(input({ applicantProfile: "family", propertyType: "hdbBto", priorSubsidised: "4room" })).levy, 40000, "fixed family resale levy screening");
 assert.ok(hh.affordablePrice(input()) > 0, "affordability search returns a usable ceiling");
 
@@ -78,6 +81,10 @@ assert.equal(defaultResult.cashRequired, 25000, "default cash requirement includ
 assert.equal(defaultResult.cashSurplus, 25000, "default profile shows the exact upfront cash surplus");
 assert.equal(hh.affordablePrice(input()), 453000, "default estimated maximum price remains reproducible");
 assert.equal(hh.calculate({ ...input(), purchasePrice: 453000, marketValue: 453000, useMaxLoan: true }).selected.loan, 339750, "maximum affordable price translates to its corresponding maximum usable loan");
+assert.equal(hh.affordablePrice(input({ monthlyIncome: 2000 })), 244000, "maximum price scales down with lower servicing income");
+assert.equal(hh.affordablePrice(input({ monthlyIncome: 4000 })), 368000, "maximum price scales up as servicing income rises");
+assert.equal(hh.affordablePrice(input({ monthlyIncome: 6000 })), 453000, "maximum price reaches the upfront-funding constraint");
+assert.equal(hh.affordablePrice(input({ monthlyIncome: 8000 })), 453000, "maximum price plateaus when income is no longer the binding constraint");
 assert.deepEqual(Object.fromEntries(Object.entries(hh.propertyPresets).map(([key, value]) => [key, value.price])), { hdbBto: 250000, hdbResale: 550000, ec: 1300000, privateCondo: 1500000, landed: 3500000, commercial: 1000000, mixed: 2000000 }, "every property type has a distinct starting price");
 
 const grantFunded = hh.calculate(input({ applicantProfile: "single", propertyType: "hdbResale", purchasePrice: 500000, marketValue: 500000, monthlyIncome: 4000, flatSize: "small", proximity: "near", includeEhg: true, includeResaleGrant: true, includeProximityGrant: true, cpfAvailable: 0, cpfBuffer: 0 }));

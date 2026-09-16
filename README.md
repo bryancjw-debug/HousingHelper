@@ -4,7 +4,7 @@ A dependency-free Singapore home-purchase screening tool. It guides one or two b
 
 ## What v1.4 adds
 
-- A property-first quiz with a compact live affordability card and a separate final analytics view.
+- A profile-first quiz ordered as Buyers, Income, Funds and Property, with a compact live affordability card and separate final analytics.
 - Requested single-applicant defaults plus property-specific illustrative price and floor-area presets.
 - Clearly separated maximum-loan and maximum-property-price estimates.
 - Conditional, user-selected HDB grant scenarios with a grant-specific funding waterfall.

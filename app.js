@@ -140,7 +140,7 @@ function grantEstimate(input) {
   const ehgCeiling = single ? 4500 : 9000;
   if (hdbPurchase && firstTimer && citizenshipEligible && hh.grossIncome <= ehgCeiling) ehgPotential = single ? singleEhgAmount(hh.grossIncome) : ehgAmount(hh.grossIncome);
   if (input.propertyType === "hdbResale" && firstTimer && citizenshipEligible) {
-    const ceiling = single ? 7000 : input.applicantProfile === "jointSingles" ? 14000 : 14000;
+    const ceiling = single ? 8000 : 16000;
     if (hh.grossIncome <= ceiling) resaleGrantPotential = single ? (input.flatSize === "small" ? 40000 : 25000) : (input.flatSize === "small" ? 80000 : 50000);
     const citizenships = hh.buyers.map((buyer) => buyer.citizenship);
     if (resaleGrantPotential && citizenships.includes("sc") && citizenships.includes("spr")) {
@@ -270,6 +270,7 @@ function routeAssessment(input, route) {
       }
     }
   } else {
+    assessmentRate = Math.max(assessmentRate, .04);
     const threshold = hdbProperty ? 30 : 35;
     const longLoan = input.loanTenure > threshold || buyers(input).some((buyer) => buyer.age + input.loanTenure > 65);
     const loanCount = hh.housingLoans;
@@ -390,7 +391,8 @@ function financeCard(route, selected) {
   const names = { bank: "Bank loan", hdb: "HDB loan", cash: "No loan" };
   const pros = route.route === "hdb" ? "Stable concessionary rate; no early repayment penalty" : route.route === "bank" ? "Fixed or floating packages; available across residential types" : "No interest or mortgage approval";
   const limits = route.route === "hdb" ? "HDB eligibility, income, age, lease and HFE rules" : route.route === "bank" ? "LTV, TDSR/MSR, credit checks, lock-ins and rate changes" : "Largest upfront funding requirement";
-  return `<article class="finance-card ${selected ? "selected" : ""} ${route.available ? "" : "unavailable"}"><div><span>${names[route.route]}</span><em>${route.status}</em></div><strong>${money(route.maximumLoan)}</strong><small>Maximum loan for current target</small><dl><dt>Expected payment</dt><dd>${money(route.expectedPayment)}/mo</dd><dt>Useful because</dt><dd>${pros}</dd><dt>Watch for</dt><dd>${limits}</dd></dl></article>`;
+  const repaymentLabel = route.route === "cash" ? "Monthly repayment" : `Repayment at ${(route.actualRate * 100).toFixed(2)}%`;
+  return `<article class="finance-card ${selected ? "selected" : ""} ${route.available ? "" : "unavailable"}"><div><span>${names[route.route]}</span><em>${route.status}</em></div><strong>${money(route.maximumLoan)}</strong><small>Maximum loan for current target</small><dl><dt>${repaymentLabel}</dt><dd>${money(route.expectedPayment)}/mo</dd><dt>Useful because</dt><dd>${pros}</dd><dt>Watch for</dt><dd>${limits}</dd></dl></article>`;
 }
 
 function policyCard(title, value, description, href, source) {
@@ -409,7 +411,8 @@ function render() {
   const maximumUsableLoan = ceiling > 0 ? ceilingOutput.selected.loan : 0;
   const priceDelta = input.purchasePrice - ceiling;
   const binding = output.selected.route === "cash" ? "No loan" : output.selected.ltvCap <= output.selected.servicingCap ? "LTV limit" : "Servicing limit";
-  const singleBtoIssue = input.propertyType === "hdbBto" && input.applicantProfile === "single" && (output.hh.grossIncome > 7000 || input.flatSize !== "small");
+  const maximumConstraint = !output.selected.available ? output.selected.status : ceilingOutput.selected.route === "cash" ? "Available cash and CPF" : ceilingOutput.selected.servicingCap <= ceilingOutput.selected.ltvCap + 1000 ? "Income and debt capacity" : "Upfront funds and LTV";
+  const singleBtoIssue = input.propertyType === "hdbBto" && input.applicantProfile === "single" && (output.hh.grossIncome > 8000 || input.flatSize !== "small");
   document.body.classList.toggle("has-second-buyer", input.hasSecondBuyer);
   document.body.classList.toggle("is-hdb", hdbTypes.has(input.propertyType));
   document.body.classList.toggle("is-resale", input.propertyType === "hdbResale");
@@ -448,7 +451,7 @@ function render() {
   $("grantNotice").textContent = output.grants.total > 0 ? `${money(output.grants.total)} in selected indicative grants is included in this projection.` : "No indicative grant is currently included. Your HFE letter remains the source of truth.";
 
   $("maxPrice").textContent = money(ceiling);
-  $("maxPriceReason").textContent = output.selected.available ? "Policy and funding screening estimate" : output.selected.status;
+  $("maxPriceReason").textContent = output.selected.available ? `Currently limited by ${maximumConstraint.toLowerCase()}` : output.selected.status;
   $("summaryTargetPrice").textContent = money(input.purchasePrice);
   $("targetVsMax").textContent = priceDelta > 0 ? `${money(priceDelta)} above estimated maximum` : `${money(Math.abs(priceDelta))} below estimated maximum`;
   $("cashGap").textContent = money(Math.abs(output.cashSurplus));
@@ -467,8 +470,8 @@ function render() {
   $("liveCashPosition").textContent = `${output.cashSurplus >= 0 ? "+" : "-"}${money(Math.abs(output.cashSurplus))}`;
   $("liveCashPosition").className = output.cashSurplus >= 0 ? "positive" : "negative";
   $("liveCpfPlanned").textContent = money(output.cpfBalanceUsed);
-  $("liveConstraint").textContent = binding;
-  $("liveStatus").textContent = !output.selected.available ? output.selected.reason : singleBtoIssue ? "Funding is estimated, but the selected single-applicant BTO profile needs attention." : output.cashSurplus < 0 ? `${money(-output.cashSurplus)} more cash is needed for the current target.` : `${money(output.cashSurplus)} remains after your selected buffer.`;
+  $("liveConstraint").textContent = maximumConstraint;
+  $("liveStatus").textContent = !output.selected.available ? output.selected.reason : singleBtoIssue ? `Funding is estimated, but the BTO profile needs attention. Maximum price is limited by ${maximumConstraint.toLowerCase()}.` : maximumConstraint === "Income and debt capacity" ? "Income and monthly debts currently set the maximum price." : "Income is sufficient for this range; upfront cash, CPF and LTV now set the maximum price.";
 
   const viable = output.viable;
   $("overallStatus").textContent = !output.selected.available ? output.selected.status : singleBtoIssue ? "Eligibility issue found" : viable ? "Funding clears screening" : "Funding gap found";
@@ -477,7 +480,7 @@ function render() {
   $("diagnosisDetail").textContent = !output.selected.available
     ? output.selected.reason
     : singleBtoIssue
-      ? `${money(output.hh.grossIncome)} monthly income is above the current $7,000 screen for a single applicant buying a 99-year 2-room Flexi BTO. Funding figures remain illustrative.`
+      ? `${money(output.hh.grossIncome)} monthly income is above the current $8,000 screen for a single applicant buying a 99-year 2-room Flexi BTO. Funding figures remain illustrative.`
     : viable
       ? `${money(output.cashSurplus)} cash remains after the selected buffers. Your screening ceiling is ${money(ceiling)}.`
       : `The entered target is ${money(Math.max(0, priceDelta))} above the estimated maximum and needs ${money(Math.max(0, -output.cashSurplus))} more upfront cash under these assumptions.`;
@@ -505,11 +508,11 @@ function render() {
     row("Servicing cap", money(output.selected.servicingCap)),
     row("Maximum loan for current target", money(output.selected.maximumLoan)),
     row("Maximum loan at estimated property limit", money(maximumUsableLoan)),
-    row("Expected monthly instalment", money(output.selected.expectedPayment)),
-    row("Assessment monthly instalment", money(output.selected.assessedPayment)),
+    row(`Estimated monthly repayment at ${(output.selected.actualRate * 100).toFixed(2)}%`, `${money(output.selected.expectedPayment)}/month`),
+    row(`Eligibility-only repayment test at ${(output.selected.assessmentRate * 100).toFixed(2)}%`, `${money(output.selected.assessedPayment)}/month`),
     row("Tenure used", `${output.selected.tenure || 0} years`)
   ].join("");
-  $("loanNotice").textContent = `${output.selected.reason}. The ${(output.selected.actualRate * 100).toFixed(2)}% expected rate is an editable planning assumption, not a lender quote. The ${(output.selected.assessmentRate * 100).toFixed(2)}% rate is used for eligibility screening. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
+  $("loanNotice").textContent = `${output.selected.reason}. Your estimated monthly repayment uses the ${(output.selected.actualRate * 100).toFixed(2)}% actual mortgage-rate assumption. The ${(output.selected.assessmentRate * 100).toFixed(2)}% stress-test rate is used only for eligibility screening and is not the rate charged on the loan. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
 
   $("policyRows").innerHTML = [
     policyCard("Indicative housing grants", money(output.grants.total), `EHG ${money(output.grants.ehg)}, resale grant ${money(output.grants.resaleGrant)}, proximity grant ${money(output.grants.proximityGrant)}. Final eligibility comes from HFE.`, "https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility", "HDB grants and eligibility"),
@@ -533,9 +536,9 @@ function render() {
     eligibility.push(check("HDB property history", input.privatePropertyStatus === "none" || input.privatePropertyStatus === "cleared" ? "pass" : "fail", input.privatePropertyStatus === "recent" ? "A 30-month disposal period is screened; confirm the applicable flat classification and exceptions through HFE." : input.privatePropertyStatus === "current" ? "A current private-property interest generally prevents this HDB loan or grant screen." : "No current disqualifying private-property history was declared."));
     eligibility.push(check("Prior HDB loans and MOP", Number(input.priorHdbLoans) < 2 && input.mopStatus !== "notMet" ? "pass" : "fail", `${input.priorHdbLoans} prior HDB concessionary loan(s) declared; MOP status: ${input.mopStatus === "na" ? "not applicable" : input.mopStatus === "met" ? "completed" : "not completed"}.`));
   }
-  if (input.propertyType === "hdbBto" && input.applicantProfile === "single") eligibility.push(check("Single-applicant BTO income ceiling", output.hh.grossIncome <= 7000 ? "pass" : "fail", `${money(output.hh.grossIncome)} entered against the current $7,000 screen for a 99-year 2-room Flexi flat. Confirm the project and flat type through HFE.`));
+  if (input.propertyType === "hdbBto" && input.applicantProfile === "single") eligibility.push(check("Single-applicant BTO income ceiling", output.hh.grossIncome <= 8000 ? "pass" : "fail", `${money(output.hh.grossIncome)} entered against the current $8,000 screen for a 99-year 2-room Flexi flat. Confirm the project and flat type through HFE.`));
   if (!hdbTypes.has(input.propertyType) && input.mopStatus !== "na") eligibility.push(check("Current HDB MOP", input.mopStatus === "met" ? "pass" : "fail", input.mopStatus === "met" ? "Completed, based on your declaration." : "A further residential purchase is generally not available before completing the MOP."));
-  if (input.propertyType === "ec") eligibility.push(check("New EC income ceiling", output.hh.grossIncome <= 16000 ? "pass" : "fail", `${money(output.hh.grossIncome)} gross monthly household income entered against the $16,000 screen. Other EC scheme conditions still require HFE.`));
+  if (input.propertyType === "ec") eligibility.push(check("New EC income ceiling", output.hh.grossIncome <= 18000 ? "pass" : "fail", `${money(output.hh.grossIncome)} gross monthly household income entered against the $18,000 screen for qualifying new EC launches from 24 August 2026. Earlier projects may retain the $16,000 ceiling; confirm through HFE.`));
   $("eligibilityRows").innerHTML = eligibility.join("");
   $("eligibilityNotice").textContent = "This is a planning screen, not an approval. Family nucleus, first-timer status, prior subsidies, disposal waiting periods, MOP, credit assessment, ABSD remissions and exact CPF limits require official confirmation.";
 }
