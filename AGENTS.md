@@ -35,6 +35,9 @@ Confirmed 16 September 2026:
 - The default example is a first-timer single applicant aged 35, earning $8,000 monthly with no monthly debt, $100,000 cash and $120,000 CPF-OA, considering an HDB BTO/SBF flat.
 - When maximum property price stops increasing with income, explain the active constraint clearly; income affects affordability only until servicing capacity is no longer the binding limit.
 - Keep actual mortgage rates and eligibility stress-test rates visually and mathematically separate. Monthly repayment figures must use the actual-rate assumption and state that rate explicitly.
+- For BTO/SBF purchases directly from HDB, use the HDB purchase price as the modelled value and do not show cash over valuation.
+- Keep cash and CPF-OA reserves at zero by default, with guidance rather than compulsory deductions. Recommend up to $20,000 CPF-OA per buyer and keep CPF ownership individual.
+- Make renovation and move-in costs opt-in. When funding is short, preserve the desired property price and show the loan, CPF, available cash and actionable shortfall instead of a discouraging pass/fail result.
 
 ## Shared Design Language
 

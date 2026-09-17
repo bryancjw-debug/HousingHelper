@@ -87,6 +87,9 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
 .has-second-buyer .second-buyer-card.active, .has-second-buyer .buyer2-input { display: grid; }
 .hdb-field, .mixed-field, .resale-field { display: none; }
 .is-hdb .hdb-field { display: grid; }
+.bto-value-note { display: none; padding: 12px 14px; border-left: 3px solid var(--teal); background: rgba(134,174,184,.08); color: #cbd4d1; font-size: .75rem; line-height: 1.45; }
+.is-bto .valuation-field { display: none; }
+.is-bto .bto-value-note { display: block; }
 .is-mixed .mixed-field { display: grid; }
 .is-resale .resale-field { display: grid; }
 
@@ -111,7 +114,14 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
 .grant-option small { grid-column: 1 / -1; }
 .grant-option.unavailable { opacity: .58; cursor: default; }
 .empty-state { padding: 18px; border: 1px dashed var(--line); color: var(--muted); font-size: .82rem; line-height: 1.5; }
-.reno-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.binary-control { min-height: 58px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); background: #1d2226; }
+.binary-control > span { font-size: .82rem; font-weight: 750; }
+.binary-control > div { display: grid; grid-template-columns: repeat(2,68px); gap: 5px; }
+.binary-control button { min-height: 36px; border: 1px solid var(--line); background: var(--field); color: var(--muted); cursor: pointer; font-weight: 760; }
+.binary-control button.active { border-color: rgba(134,196,173,.6); background: var(--soft-green); color: var(--green); }
+.reno-details { display: none; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 14px; border: 1px solid var(--line); background: rgba(29,34,38,.55); }
+.includes-renovation .reno-details { display: grid; }
+.reno-choices { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
 .reno-choices button { min-height: 112px; padding: 13px; display: grid; align-content: start; gap: 5px; text-align: left; border: 1px solid var(--line); border-radius: 5px; background: #1d2226; color: var(--ink); cursor: pointer; }
 .reno-choices button span { font-weight: 800; }
 .reno-choices button strong { color: var(--green); font-size: .82rem; }
@@ -151,7 +161,7 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
 .score-visual img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .scoreboard h3 { margin: 0 0 8px; font-size: 1.55rem; line-height: 1.15; }
 .scoreboard p:last-child { margin-bottom: 0; color: var(--muted); line-height: 1.5; }
-.result-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-bottom: 1px solid var(--line); }
+.result-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-bottom: 1px solid var(--line); }
 .result-metrics div { min-height: 98px; padding: 14px 16px; display: grid; align-content: space-between; gap: 5px; border-right: 1px solid var(--line); }
 .result-metrics div:last-child { border-right: 0; }
 .result-metrics span { color: var(--muted); font-size: .72rem; }
@@ -193,6 +203,7 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
 .finance-card dd { margin: 0; line-height: 1.35; }
 .notice, .sources { padding: 13px 14px; background: var(--soft-green); border-left: 3px solid var(--green); color: #cbd5d1; font-size: .78rem; line-height: 1.45; }
 .notice { margin-top: 14px; }
+.funding-bridge { margin: 0 0 16px; }
 .sources { margin: 0 16px 16px; }
 .policy-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
 .policy-card { min-height: 172px; padding: 13px; display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--field); }
@@ -226,7 +237,9 @@ input[type="range"] { padding: 0; accent-color: var(--green); }
   .scenario-note { margin: 12px 14px 0; }
   .step-card { min-height: 0; grid-template-columns: 1fr; padding: 22px 16px 24px; }
   .wide { grid-column: auto; }
-  .choice-grid, .finance-choices, .live-strip, .advanced-grid, .reno-choices { grid-template-columns: 1fr; }
+  .choice-grid, .finance-choices, .live-strip, .advanced-grid, .reno-choices, .reno-details { grid-template-columns: 1fr; }
+  .binary-control { align-items: stretch; flex-direction: column; }
+  .binary-control > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .tooltip-content { left: -190px; right: auto; transform: translateY(4px); }
   .help-tooltip:hover .tooltip-content, .help-tooltip:focus .tooltip-content, .help-tooltip:focus-within .tooltip-content { transform: translateY(0); }
   .step-rail { padding-inline: 10px; }

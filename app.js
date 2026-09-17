@@ -1,4 +1,4 @@
-const POLICY_DATE = "16 Sep 2026";
+const POLICY_DATE = "17 Sep 2026";
 const $ = (id) => document.getElementById(id);
 
 const defaults = {
@@ -13,9 +13,9 @@ const defaults = {
   remainingLease: 99, residentialShare: 100, proximity: "none", priorHdbLoans: "0",
   privatePropertyStatus: "none", mopStatus: "na", loanType: "hdb", loanTenure: 25,
   actualInterestRate: 2.6, assessmentRate: 3.0, desiredLoan: 187500, useMaxLoan: true,
-  includeEhg: false, includeResaleGrant: false, includeProximityGrant: false,
+  includeEhg: false, includeResaleGrant: false, includeProximityGrant: false, includeRenovation: false,
   renovationScope: "light", floorArea: 500, renoRate: 30, moveInReserve: 10000,
-  legalFees: 3500, cashBuffer: 50000, cpfBuffer: 20000, priorSubsidised: "none"
+  legalFees: 3500, cashBuffer: 0, cpfBuffer: 0, priorSubsidised: "none"
 };
 
 const renovationRates = { light: 30, standard: 55, premium: 90 };
@@ -35,8 +35,9 @@ const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 function isResidential(input) { return residentialTypes.has(input.propertyType); }
 function residentialShare(input) { return isResidential(input) ? 1 : input.propertyType === "mixed" ? clamp(input.residentialShare, 0, 1) : 0; }
-function stampBase(input) { return Math.max(input.purchasePrice, input.marketValue); }
-function loanBase(input) { return Math.min(input.purchasePrice, input.marketValue); }
+function effectiveMarketValue(input) { return input.propertyType === "hdbBto" ? input.purchasePrice : input.marketValue; }
+function stampBase(input) { return Math.max(input.purchasePrice, effectiveMarketValue(input)); }
+function loanBase(input) { return Math.min(input.purchasePrice, effectiveMarketValue(input)); }
 
 function marginalDuty(amount, bands) {
   if (amount <= 0) return 0;
@@ -304,6 +305,7 @@ function cpfUsageLimit(input, route) {
 }
 
 function renovation(input) {
+  if (!input.includeRenovation) return 0;
   const rate = input.renovationScope === "custom" ? input.renoRate : renovationRates[input.renovationScope];
   return input.floorArea * rate + input.moveInReserve;
 }
@@ -320,7 +322,7 @@ function calculate(input) {
   };
   const selected = routes[input.loanType];
   const reno = renovation(input);
-  const cov = Math.max(0, input.purchasePrice - input.marketValue);
+  const cov = Math.max(0, input.purchasePrice - effectiveMarketValue(input));
   const cashPool = Math.max(0, hh.cash - input.cashBuffer);
   const cpfBalances = Math.max(0, hh.cpf - input.cpfBuffer);
   const grantPool = hh.confirmedGrants + grants.total;
@@ -337,11 +339,12 @@ function calculate(input) {
   const totalOutlay = input.purchasePrice + duty.total + input.legalFees + reno + levy;
   const cashRequired = Math.max(0, totalOutlay - selected.loan - cpfUsed);
   const cashSurplus = cashPool - cashRequired;
+  const cashShortfall = Math.max(0, -cashSurplus);
   const cpfSurplus = cpfBalances - cpfBalanceUsed;
   return {
     hh, duty, grants, levy, routes, selected, reno, cov, cashPool, cpfBalances, grantPool, cpfPool,
     cpfLimit, minimumCashDown, downpayment, housingPaymentEligible, grantUsed, cpfEligible, cpfBalanceUsed, cpfUsed, totalOutlay, cashRequired,
-    cashSurplus, cpfSurplus, viable: selected.available && cashSurplus >= 0
+    cashSurplus, cashShortfall, cpfSurplus, viable: selected.available && cashSurplus >= 0
   };
 }
 
@@ -415,9 +418,11 @@ function render() {
   const singleBtoIssue = input.propertyType === "hdbBto" && input.applicantProfile === "single" && (output.hh.grossIncome > 8000 || input.flatSize !== "small");
   document.body.classList.toggle("has-second-buyer", input.hasSecondBuyer);
   document.body.classList.toggle("is-hdb", hdbTypes.has(input.propertyType));
+  document.body.classList.toggle("is-bto", input.propertyType === "hdbBto");
   document.body.classList.toggle("is-resale", input.propertyType === "hdbResale");
   document.body.classList.toggle("is-mixed", input.propertyType === "mixed");
   document.body.classList.toggle("is-custom-reno", input.renovationScope === "custom");
+  document.body.classList.toggle("includes-renovation", input.includeRenovation);
 
   $("incomeRecognitionReadout").textContent = `${Math.round(input.incomeRecognition * 100)}%`;
   $("incomeRecognitionReadout2").textContent = `${Math.round(input.incomeRecognition2 * 100)}%`;
@@ -425,6 +430,8 @@ function render() {
   $("usableCashPreview").textContent = money(output.cashPool);
   $("usableCpfPreview").textContent = money(output.cpfBalances);
   $("renoTotalPreview").textContent = money(output.reno);
+  $("cashBufferSuggestion").textContent = `Suggested planning reference: ${money(output.hh.grossIncome * 3)} (three months of entered gross income). MoneySense generally recommends three to six months of expenses; income is used here only as a conservative proxy.`;
+  $("cpfBufferSuggestion").textContent = `Consider retaining up to ${money(output.hh.buyers.length * 20000)} in total (${money(20000)} per buyer) for future housing instalments. Extra CPF interest depends on each buyer's combined CPF balances and age.`;
   const propertyNames = { hdbBto: "new HDB flat", hdbResale: "HDB resale flat", ec: "new EC", privateCondo: "private home", landed: "landed home", commercial: "commercial property", mixed: "mixed-use property" };
   $("scenarioSummary").textContent = `${output.hh.buyers.length} buyer${output.hh.buyers.length > 1 ? "s" : ""} · ${propertyNames[input.propertyType]} · ${money(input.purchasePrice)} target · ${input.loanType === "bank" ? "bank loan" : input.loanType === "hdb" ? "HDB loan" : "no loan"}. All values remain editable.`;
 
@@ -436,6 +443,11 @@ function render() {
     button.setAttribute("aria-pressed", String(button.dataset.loan === input.loanType));
   });
   document.querySelectorAll("[data-reno]").forEach((button) => button.classList.toggle("active", button.dataset.reno === input.renovationScope));
+  document.querySelectorAll("[data-reno-included]").forEach((button) => {
+    const selected = String(input.includeRenovation) === button.dataset.renoIncluded;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
 
   const grantPotentials = output.grants.potentials;
   const hdbPurchase = hdbTypes.has(input.propertyType);
@@ -460,11 +472,16 @@ function render() {
   $("cpfGap").textContent = money(output.cpfBalanceUsed);
   $("cpfGap").className = "cpf-value";
   $("cpfGapLabel").textContent = `${money(output.cpfSurplus)} entered CPF-OA remains`;
-  $("screeningPrice").textContent = money(ceiling);
   $("targetPrice").textContent = money(input.purchasePrice);
-  $("priceDifference").textContent = priceDelta > 0 ? `${money(priceDelta)} above estimate` : `${money(Math.abs(priceDelta))} below estimate`;
-  $("bindingConstraint").textContent = binding;
-  $("bindingDetail").textContent = binding === "LTV limit" ? `${money(output.selected.ltvCap)} LTV cap is lower` : binding === "Servicing limit" ? `${money(output.selected.servicingCap)} servicing cap is lower` : "Purchase is funded without a mortgage";
+  $("targetPriceDetail").textContent = `${propertyNames[input.propertyType]} selected`;
+  $("resultMaxLoan").textContent = money(output.selected.maximumLoan);
+  $("resultMaxLoanDetail").textContent = binding === "No loan" ? "No mortgage selected" : `${binding} for this target`;
+  $("resultCpfPlanned").textContent = money(output.cpfBalanceUsed);
+  $("resultCpfDetail").textContent = `${money(output.cpfSurplus)} entered CPF-OA remains`;
+  $("resultFundingGap").textContent = output.cashShortfall > 0 ? money(output.cashShortfall) : money(output.cashSurplus);
+  $("resultFundingGap").className = output.cashShortfall > 0 ? "negative" : "positive";
+  $("resultFundingLabel").textContent = output.cashShortfall > 0 ? "Cash shortfall to prepare" : "Cash remaining";
+  $("resultFundingDetail").textContent = `${money(output.cashPool)} available for the purchase`;
   $("liveMaxPrice").textContent = money(ceiling);
   $("liveMaxLoan").textContent = money(maximumUsableLoan);
   $("liveCashPosition").textContent = `${output.cashSurplus >= 0 ? "+" : "-"}${money(Math.abs(output.cashSurplus))}`;
@@ -474,16 +491,20 @@ function render() {
   $("liveStatus").textContent = !output.selected.available ? output.selected.reason : singleBtoIssue ? `Funding is estimated, but the BTO profile needs attention. Maximum price is limited by ${maximumConstraint.toLowerCase()}.` : maximumConstraint === "Income and debt capacity" ? "Income and monthly debts currently set the maximum price." : "Income is sufficient for this range; upfront cash, CPF and LTV now set the maximum price.";
 
   const viable = output.viable;
-  $("overallStatus").textContent = !output.selected.available ? output.selected.status : singleBtoIssue ? "Eligibility issue found" : viable ? "Funding clears screening" : "Funding gap found";
+  $("overallStatus").textContent = !output.selected.available ? output.selected.status : singleBtoIssue ? "Eligibility review needed" : viable ? "Target funding clears" : "Plan needs more funding";
   $("overallStatus").className = `status-pill ${!output.selected.available || singleBtoIssue || !viable ? "warn" : "good"}`;
-  $("diagnosis").textContent = !output.selected.available ? "This route needs a different assessment" : singleBtoIssue ? "Your funding works, but eligibility needs attention" : viable ? "Your target clears the upfront screen" : "Your target has an upfront shortfall";
+  $("diagnosis").textContent = !output.selected.available ? "This route needs a different assessment" : singleBtoIssue ? "Your plan needs an eligibility review" : viable ? "Your desired property is funded in this plan" : "You have a clear funding gap to work towards";
   $("diagnosisDetail").textContent = !output.selected.available
     ? output.selected.reason
     : singleBtoIssue
-      ? `${money(output.hh.grossIncome)} monthly income is above the current $8,000 screen for a single applicant buying a 99-year 2-room Flexi BTO. Funding figures remain illustrative.`
+      ? `${money(output.hh.grossIncome)} monthly income or the selected flat profile needs confirmation against the current single-applicant BTO rules. The funding bridge remains visible for planning.`
     : viable
-      ? `${money(output.cashSurplus)} cash remains after the selected buffers. Your screening ceiling is ${money(ceiling)}.`
-      : `The entered target is ${money(Math.max(0, priceDelta))} above the estimated maximum and needs ${money(Math.max(0, -output.cashSurplus))} more upfront cash under these assumptions.`;
+      ? `At your ${money(input.purchasePrice)} target, the estimated ${money(output.selected.loan)} loan and ${money(output.cpfUsed)} of CPF and grants leave ${money(output.cashSurplus)} cash after the purchase.`
+      : `At your ${money(input.purchasePrice)} target, the estimated ${money(output.selected.loan)} loan and ${money(output.cpfUsed)} of CPF and grants leave a ${money(output.cashShortfall)} cash gap to prepare.`;
+
+  $("fundingBridge").textContent = output.cashShortfall > 0
+    ? `Your desired price remains the basis of this plan. It needs ${money(output.cashRequired)} cash in total; ${money(output.cashPool)} is currently available, leaving ${money(output.cashShortfall)} to prepare. The current-funds purchase range is approximately ${money(ceiling)}.`
+    : `Your desired price remains the basis of this plan. It needs ${money(output.cashRequired)} cash and ${money(output.cashPool)} is available, leaving ${money(output.cashSurplus)} after purchase. The current-funds purchase range is approximately ${money(ceiling)}.`;
 
   $("outlayRows").innerHTML = [
     timeline("At booking / option", "Minimum cash downpayment", money(output.minimumCashDown), output.selected.route === "bank" ? `${percent(output.selected.minCashRate)} of the lower price or value in this screen` : "No minimum cash portion modelled"),
@@ -492,18 +513,18 @@ function render() {
     timeline("At purchase", "CPF-OA planned", money(output.cpfBalanceUsed), output.cpfLimit.note),
     timeline("At stamping", "BSD and ABSD", money(output.duty.total), `BSD ${money(output.duty.bsd)} · ABSD ${money(output.duty.absd)}`),
     timeline("At completion", "Cash needed after loan and CPF", money(Math.max(0, output.cashRequired - output.reno)), "Includes purchase balance, duties, fees and any levy"),
-    timeline("After completion", "Renovation and move-in", money(output.reno), "Cash planning allowance"),
+    timeline("After completion", "Renovation and move-in", money(output.reno), input.includeRenovation ? "Included cash planning allowance" : "Not included in this plan"),
     timeline("If applicable", "Indicative resale levy", money(output.levy), "Paid from cash or sale proceeds, not the new housing loan")
   ].join("");
-  $("cashRequiredLabel").textContent = money(output.cashRequired);
-  $("cpfRequiredLabel").textContent = money(output.cpfBalanceUsed);
-  $("cashMeter").style.width = `${Math.min(100, output.cashRequired / Math.max(1, output.cashPool) * 100)}%`;
+  $("cashRequiredLabel").textContent = output.cashRequired === 0 ? `Fully covered · ${money(output.cashPool)} remains` : `${money(Math.min(output.cashPool, output.cashRequired))} of ${money(output.cashRequired)}`;
+  $("cpfRequiredLabel").textContent = `${money(output.cpfBalanceUsed)} of ${money(output.cpfBalances)}`;
+  $("cashMeter").style.width = `${output.cashRequired === 0 ? 100 : Math.min(100, output.cashPool / output.cashRequired * 100)}%`;
   $("cpfMeter").style.width = `${Math.min(100, output.cpfBalanceUsed / Math.max(1, output.cpfBalances) * 100)}%`;
 
   $("financeComparison").innerHTML = ["hdb", "bank", "cash"].map((key) => financeCard(output.routes[key], key === input.loanType)).join("");
   $("loanRows").innerHTML = [
     row("Selected financing route", input.loanType === "hdb" ? "HDB loan" : input.loanType === "bank" ? "Bank loan" : "No loan"),
-    row("Loan base (lower price or value)", money(loanBase(input))),
+    row(input.propertyType === "hdbBto" ? "Loan base (HDB purchase price)" : "Loan base (lower price or value)", money(loanBase(input))),
     row("LTV cap", `${percent(output.selected.ltv)} · ${money(output.selected.ltvCap)}`),
     row("Servicing cap", money(output.selected.servicingCap)),
     row("Maximum loan for current target", money(output.selected.maximumLoan)),
@@ -587,15 +608,21 @@ function applyPropertyPreset(type) {
   } else {
     $("pricePresetNote").textContent = "Your custom price has been preserved.";
   }
+  if (type === "hdbBto") syncDirectHdbValue();
   const hdb = hdbTypes.has(type);
   $("loanType").value = hdb ? "hdb" : type === "commercial" || type === "mixed" ? "cash" : "bank";
   $("actualInterestRate").value = hdb ? "2.6" : "3.0";
   $("assessmentRate").value = hdb ? "3.0" : "4.0";
 }
 
+function syncDirectHdbValue() {
+  if ($("propertyType").value === "hdbBto") $("marketValue").value = $("purchasePrice").value;
+}
+
 function init() {
   $("plannerForm").addEventListener("input", (event) => {
     if (event.target.id === "purchasePrice" || event.target.id === "marketValue") { priceUsesPreset = false; $("pricePresetNote").textContent = "Custom value entered."; }
+    if (event.target.id === "purchasePrice") syncDirectHdbValue();
     if (event.target.id === "propertyType") applyPropertyPreset(event.target.value);
     if (event.target.id === "incomeType" && event.target.value !== "fixed" && $("incomeRecognition").value === "100") $("incomeRecognition").value = "70";
     if (event.target.id === "incomeType2" && event.target.value !== "fixed" && $("incomeRecognition2").value === "100") $("incomeRecognition2").value = "70";
@@ -608,6 +635,7 @@ function init() {
   });
   document.querySelectorAll("[data-property]").forEach((button) => button.addEventListener("click", () => { $("propertyType").value = button.dataset.property; applyPropertyPreset(button.dataset.property); render(); }));
   document.querySelectorAll("[data-reno]").forEach((button) => button.addEventListener("click", () => { $("renovationScope").value = button.dataset.reno; render(); }));
+  document.querySelectorAll("[data-reno-included]").forEach((button) => button.addEventListener("click", () => { $("includeRenovation").checked = button.dataset.renoIncluded === "true"; render(); }));
   document.querySelectorAll("[data-loan]").forEach((button) => button.addEventListener("click", () => {
     const input = getInputs();
     if (!routeAssessment(input, button.dataset.loan).available && button.dataset.loan !== "cash") return;
@@ -631,4 +659,4 @@ function init() {
 }
 
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", init);
-if (typeof module !== "undefined" && module.exports) module.exports = { defaults, propertyPresets, marginalDuty, residentialBsd, nonResidentialBsd, household, absdRate, duties, grantEstimate, routeAssessment, cpfUsageLimit, calculate, affordablePrice, loanBase, stampBase };
+if (typeof module !== "undefined" && module.exports) module.exports = { defaults, propertyPresets, marginalDuty, residentialBsd, nonResidentialBsd, household, absdRate, duties, grantEstimate, routeAssessment, cpfUsageLimit, calculate, affordablePrice, loanBase, stampBase, effectiveMarketValue };
