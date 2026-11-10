@@ -400,23 +400,31 @@ function financeCard(route, selected) {
 
 function renderMortgageComparison({ loan, tenure, actualRate, expectedPayment }) {
   const comparison = $("mortgageHeading").parentElement;
-  comparison.hidden = loan <= 0 || tenure <= 1;
+  comparison.hidden = loan <= 0;
   if (comparison.hidden) return;
 
   $("mortgageAssumptions").textContent =
     `Compare the same ${money(loan)} loan at ${(actualRate * 100).toFixed(2)}% per year. Savings are measured against the ${tenure}-year tenure used in your plan.`;
   const baselineInterest = Math.max(0, expectedPayment * tenure * 12 - loan);
-  const tenures = [...new Set([tenure, Math.max(1, tenure - 5), Math.max(1, tenure - 10)])];
+  const comparisonTenures = [];
+  $("mortgageInputs").querySelectorAll("input").forEach((field) => {
+    const valid = field.validity.valid;
+    field.setAttribute("aria-invalid", String(!valid));
+    if (valid && Number.isFinite(field.valueAsNumber)) comparisonTenures.push(field.valueAsNumber);
+  });
+  const tenures = [...new Set([tenure, ...comparisonTenures])];
   $("mortgageScenarios").innerHTML = tenures.map((years) => {
     const monthly = paymentForLoan(loan, actualRate, years);
     const interest = Math.max(0, monthly * years * 12 - loan);
     const baseline = years === tenure;
+    const monthlyDifference = monthly - expectedPayment;
+    const interestSavings = baselineInterest - interest;
     return `<article class="finance-card mortgage-scenario ${baseline ? "selected" : ""}">
       <span>${years} ${years === 1 ? "year" : "years"}${baseline ? " (baseline)" : ""}</span>
       <strong>${money(monthly)}/mo</strong>
-      <small>${baseline ? "Payment in your plan" : `${money(monthly - expectedPayment)} more per month`}</small>
+      <small>${baseline ? "Payment in your plan" : `${money(Math.abs(monthlyDifference))} ${monthlyDifference < 0 ? "less" : "more"} per month`}</small>
       <dl><dt>Total interest</dt><dd>${money(interest)}</dd>
-        ${baseline ? "" : `<dt>Interest saved</dt><dd>${money(Math.max(0, baselineInterest - interest))}</dd>`}
+        ${baseline ? "" : `<dt>${interestSavings < -0.005 ? "Extra interest" : "Interest saved"}</dt><dd>${money(Math.abs(interestSavings))}</dd>`}
       </dl>
     </article>`;
   }).join("");
@@ -677,6 +685,7 @@ function init() {
     button.classList.add("active");
     $(button.dataset.tab).classList.add("active");
   }));
+  $("mortgageInputs").addEventListener("input", () => renderMortgageComparison(calculate(getInputs()).selected));
   $("resetBtn").addEventListener("click", reset);
   $("editBtn").addEventListener("click", () => { currentStep = Math.max(0, activeSteps().length - 1); updateSteps(); $("plannerForm").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("printBtn").addEventListener("click", () => window.print());

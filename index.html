@@ -6,7 +6,7 @@
   <meta name="description" content="A guided Singapore home affordability and purchase outlay estimator.">
   <link rel="icon" type="image/png" href="assets/housing-helper-illustration.png">
   <title>Housing Helper v1.5</title>
-  <link rel="stylesheet" href="styles.css?v=1.5.1">
+  <link rel="stylesheet" href="styles.css?v=1.5.2">
 </head>
 <body>
   <main class="app">
@@ -161,6 +161,11 @@
           <section class="mortgage-comparison" aria-labelledby="mortgageHeading" hidden>
             <h3 id="mortgageHeading">Compare mortgage tenures</h3>
             <p class="section-copy" id="mortgageAssumptions"></p>
+            <div class="mortgage-inputs" id="mortgageInputs">
+              <label>Comparison tenure 1 (years)<input type="number" min="1" max="35" step="1" value="20" aria-describedby="mortgageTenureHelp"></label>
+              <label>Comparison tenure 2 (years)<input type="number" min="1" max="35" step="1" value="15" aria-describedby="mortgageTenureHelp"></label>
+            </div>
+            <p class="section-copy" id="mortgageTenureHelp">Enter whole years from 1 to 35. Each distinct tenure appears once.</p>
             <div class="finance-comparison" id="mortgageScenarios"></div>
             <p class="section-copy">Estimates assume equal monthly payments and a constant rate, with no fees or early repayments. A shorter tenure raises monthly payments and may reduce the amount you qualify to borrow. Confirm available terms with your lender.</p>
           </section>
@@ -171,6 +176,6 @@
       </section>
     </section>
   </main>
-  <script src="app.js?v=1.5.1"></script>
+  <script src="app.js?v=1.5.2"></script>
 </body>
 </html>
