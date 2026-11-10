@@ -398,6 +398,30 @@ function financeCard(route, selected) {
   return `<article class="finance-card ${selected ? "selected" : ""} ${route.available ? "" : "unavailable"}"><div><span>${names[route.route]}</span><em>${route.status}</em></div><strong>${money(route.maximumLoan)}</strong><small>Maximum loan for current target</small><dl><dt>${repaymentLabel}</dt><dd>${money(route.expectedPayment)}/mo</dd><dt>Useful because</dt><dd>${pros}</dd><dt>Watch for</dt><dd>${limits}</dd></dl></article>`;
 }
 
+function renderMortgageComparison({ loan, tenure, actualRate, expectedPayment }) {
+  const comparison = $("mortgageHeading").parentElement;
+  comparison.hidden = loan <= 0 || tenure <= 1;
+  if (comparison.hidden) return;
+
+  $("mortgageAssumptions").textContent =
+    `Compare the same ${money(loan)} loan at ${(actualRate * 100).toFixed(2)}% per year. Savings are measured against the ${tenure}-year tenure used in your plan.`;
+  const baselineInterest = Math.max(0, expectedPayment * tenure * 12 - loan);
+  const tenures = [...new Set([tenure, Math.max(1, tenure - 5), Math.max(1, tenure - 10)])];
+  $("mortgageScenarios").innerHTML = tenures.map((years) => {
+    const monthly = paymentForLoan(loan, actualRate, years);
+    const interest = Math.max(0, monthly * years * 12 - loan);
+    const baseline = years === tenure;
+    return `<article class="finance-card mortgage-scenario ${baseline ? "selected" : ""}">
+      <span>${years} ${years === 1 ? "year" : "years"}${baseline ? " (baseline)" : ""}</span>
+      <strong>${money(monthly)}/mo</strong>
+      <small>${baseline ? "Payment in your plan" : `${money(monthly - expectedPayment)} more per month`}</small>
+      <dl><dt>Total interest</dt><dd>${money(interest)}</dd>
+        ${baseline ? "" : `<dt>Interest saved</dt><dd>${money(Math.max(0, baselineInterest - interest))}</dd>`}
+      </dl>
+    </article>`;
+  }).join("");
+}
+
 function policyCard(title, value, description, href, source) {
   return `<article class="policy-card"><span>${title}</span><strong>${value}</strong><p>${description}</p><a href="${href}" target="_blank" rel="noreferrer">${source} ↗</a></article>`;
 }
@@ -533,6 +557,7 @@ function render() {
     row(`Eligibility-only repayment test at ${(output.selected.assessmentRate * 100).toFixed(2)}%`, `${money(output.selected.assessedPayment)}/month`),
     row("Tenure used", `${output.selected.tenure || 0} years`)
   ].join("");
+  renderMortgageComparison(output.selected);
   $("loanNotice").textContent = `${output.selected.reason}. Your estimated monthly repayment uses the ${(output.selected.actualRate * 100).toFixed(2)}% actual mortgage-rate assumption. The ${(output.selected.assessmentRate * 100).toFixed(2)}% stress-test rate is used only for eligibility screening and is not the rate charged on the loan. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
 
   $("policyRows").innerHTML = [
