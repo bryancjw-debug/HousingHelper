@@ -2,6 +2,7 @@ const POLICY_DATE = "17 Sep 2026";
 const $ = (id) => document.getElementById(id);
 
 const defaults = {
+  excludeCpfBuyer1: false, excludeCpfBuyer2: false,
   hasSecondBuyer: false, applicantProfile: "single", firstTimer: "yes",
   citizenship: "sc", buyerAge: 35, ownedProperties: 0, housingLoans1: 0,
   citizenship2: "sc", buyerAge2: 36, ownedProperties2: 0, housingLoans2: 0,
@@ -65,14 +66,14 @@ function buyers(input) {
     label: "Buyer 1", citizenship: input.citizenship, age: input.buyerAge,
     properties: input.ownedProperties, housingLoans: input.housingLoans1,
     income: input.monthlyIncome, debt: input.monthlyDebt, recognition: input.incomeRecognition,
-    incomeType: input.incomeType, cash: input.cashAvailable, cpf: input.cpfAvailable,
+    incomeType: input.incomeType, cash: input.cashAvailable, cpf: input.cpfAvailable, usesCpf: !input.excludeCpfBuyer1,
     grants: input.otherGrants, saleProceeds: input.saleProceeds
   }];
   if (input.hasSecondBuyer) list.push({
     label: "Buyer 2", citizenship: input.citizenship2, age: input.buyerAge2,
     properties: input.ownedProperties2, housingLoans: input.housingLoans2,
     income: input.monthlyIncome2, debt: input.monthlyDebt2, recognition: input.incomeRecognition2,
-    incomeType: input.incomeType2, cash: input.cashAvailable2, cpf: input.cpfAvailable2,
+    incomeType: input.incomeType2, cash: input.cashAvailable2, cpf: input.cpfAvailable2, usesCpf: !input.excludeCpfBuyer2,
     grants: input.otherGrants2, saleProceeds: input.saleProceeds2
   });
   return list;
@@ -87,7 +88,7 @@ function household(input) {
     monthlyDebt: list.reduce((sum, buyer) => sum + buyer.debt, 0),
     housingLoans: Math.max(...list.map((buyer) => buyer.housingLoans)),
     cash: list.reduce((sum, buyer) => sum + buyer.cash + buyer.saleProceeds, 0),
-    cpf: list.reduce((sum, buyer) => sum + buyer.cpf, 0),
+    cpf: list.reduce((sum, buyer) => sum + (buyer.usesCpf ? buyer.cpf : 0), 0),
     confirmedGrants: list.reduce((sum, buyer) => sum + buyer.grants, 0),
     youngestAge: Math.min(...list.map((buyer) => buyer.age)),
     averageAge: list.reduce((sum, buyer) => sum + buyer.age, 0) / list.length,
@@ -187,10 +188,9 @@ function principalForPayment(payment, annualRate, years) {
   return payment * (1 - Math.pow(1 + monthlyRate, -months)) / monthlyRate;
 }
 
-function leaseCoverage(input) {
-  const hh = household(input);
+function leaseCoverage(input, youngestAge = household(input).youngestAge) {
   if (input.remainingLease >= 900) return { coversTo95: true, factor: 1 };
-  const yearsNeeded = Math.max(1, 95 - hh.youngestAge);
+  const yearsNeeded = Math.max(1, 95 - youngestAge);
   const coversTo95 = input.remainingLease >= yearsNeeded;
   const factor = coversTo95 ? 1 : clamp((input.remainingLease - 20) / Math.max(1, yearsNeeded - 20), 0, 1);
   return { coversTo95, factor };
@@ -295,13 +295,19 @@ function routeAssessment(input, route) {
   };
 }
 
-function cpfUsageLimit(input, route) {
-  if (!isResidential(input)) return { limit: 0, factor: 0, note: "CPF housing savings are not modelled for non-residential property." };
-  if (input.remainingLease < 20) return { limit: 0, factor: 0, note: "CPF use is unavailable in this screening because the remaining lease is below 20 years." };
-  const lease = leaseCoverage(input);
-  const valuationLimit = loanBase(input) * lease.factor;
-  const limit = route === "bank" ? valuationLimit * 1.2 : valuationLimit;
-  return { limit, factor: lease.factor, note: lease.coversTo95 ? "Lease covers the youngest buyer to age 95." : "CPF usage is pro-rated for screening; confirm the exact limit with CPF Board." };
+function cpfUsageLimit(input) {
+  if (!isResidential(input)) return { limit: 0, factor: 0, note: "CPF housing savings are only modelled for residential property." };
+  const cpfBuyers = buyers(input).filter((buyer) => buyer.usesCpf);
+  if (!cpfBuyers.length) return { limit: 0, factor: 0, note: "No buyer plans to use CPF for this property." };
+  if (input.remainingLease <= 20) return { limit: 0, factor: 0, restricted: true, note: "CPF housing use is unavailable at 20 years of remaining lease or less." };
+
+  const youngestAge = Math.min(...cpfBuyers.map((buyer) => buyer.age));
+  const lease = leaseCoverage(input, youngestAge);
+  const limit = loanBase(input) * lease.factor;
+  const note = lease.coversTo95
+    ? "The lease covers the youngest buyer using CPF to age 95. The estimate uses the lower of price or valuation; some loan types allow further usage if retirement requirements are met."
+    : `The lease covers the youngest buyer using CPF (age ${youngestAge}) to about age ${youngestAge + input.remainingLease}. The combined purchase and repayment cap is estimated at ${(lease.factor * 100).toFixed(1)}% of the lower of price or valuation.`;
+  return { limit, factor: lease.factor, restricted: !lease.coversTo95, note };
 }
 
 function renovation(input) {
@@ -328,13 +334,15 @@ function calculate(input) {
   const grantPool = hh.confirmedGrants + grants.total;
   const cpfPool = cpfBalances + grantPool;
   const minimumCashDown = selected.available && selected.route === "bank" ? loanBase(input) * selected.minCashRate : 0;
-  const cpfLimit = cpfUsageLimit(input, selected.route);
+  const cpfLimit = cpfUsageLimit(input);
   const residentialDuty = duty.bsdResidential + duty.absd;
   const downpayment = Math.max(0, input.purchasePrice - selected.loan);
   const housingPaymentEligible = isResidential(input) ? Math.max(0, downpayment - cov - minimumCashDown) : 0;
   const grantUsed = Math.min(grantPool, cpfLimit.limit, housingPaymentEligible);
-  const cpfEligible = isResidential(input) ? Math.max(0, housingPaymentEligible - grantUsed) + residentialDuty + input.legalFees : 0;
-  const cpfBalanceUsed = Math.min(cpfBalances, Math.max(0, cpfLimit.limit - grantUsed), cpfEligible);
+  const cpfForPrice = Math.min(cpfBalances, cpfLimit.limit - grantUsed, housingPaymentEligible - grantUsed);
+  const cpfForFees = cpfLimit.limit > 0 ? Math.min(cpfBalances - cpfForPrice, residentialDuty + input.legalFees) : 0;
+  const cpfBalanceUsed = cpfForPrice + cpfForFees;
+  const cpfRepaymentHeadroom = Math.max(0, cpfLimit.limit - grantUsed - cpfForPrice);
   const cpfUsed = grantUsed + cpfBalanceUsed;
   const totalOutlay = input.purchasePrice + duty.total + input.legalFees + reno + levy;
   const cashRequired = Math.max(0, totalOutlay - selected.loan - cpfUsed);
@@ -343,7 +351,7 @@ function calculate(input) {
   const cpfSurplus = cpfBalances - cpfBalanceUsed;
   return {
     hh, duty, grants, levy, routes, selected, reno, cov, cashPool, cpfBalances, grantPool, cpfPool,
-    cpfLimit, minimumCashDown, downpayment, housingPaymentEligible, grantUsed, cpfEligible, cpfBalanceUsed, cpfUsed, totalOutlay, cashRequired,
+    cpfLimit, minimumCashDown, downpayment, housingPaymentEligible, grantUsed, cpfRepaymentHeadroom, cpfBalanceUsed, cpfUsed, totalOutlay, cashRequired,
     cashSurplus, cashShortfall, cpfSurplus, viable: selected.available && cashSurplus >= 0
   };
 }
@@ -565,6 +573,8 @@ function render() {
     row(`Eligibility-only repayment test at ${(output.selected.assessmentRate * 100).toFixed(2)}%`, `${money(output.selected.assessedPayment)}/month`),
     row("Tenure used", `${output.selected.tenure || 0} years`)
   ].join("");
+  $("cpfRepaymentNotice").hidden = !output.cpfLimit.restricted || output.selected.loan <= 0;
+  $("cpfRepaymentNotice").textContent = `${output.cpfLimit.note} Estimated cap remaining for repayments after purchase: ${money(output.cpfRepaymentHeadroom)}. This is cumulative room under the cap. Actual payments depend on available OA savings and CPF approval. Once the cap is reached, remaining instalments are paid in cash.`;
   renderMortgageComparison(output.selected);
   $("loanNotice").textContent = `${output.selected.reason}. Your estimated monthly repayment uses the ${(output.selected.actualRate * 100).toFixed(2)}% actual mortgage-rate assumption. The ${(output.selected.assessmentRate * 100).toFixed(2)}% stress-test rate is used only for eligibility screening and is not the rate charged on the loan. Self-employed income recognition is your scenario assumption, not a universal lender haircut.`;
 
@@ -580,7 +590,7 @@ function render() {
   const eligibility = [];
   eligibility.push(check("Financing route", output.selected.available ? "pass" : "fail", output.selected.reason));
   eligibility.push(check("Upfront cash", output.cashSurplus >= 0 ? "pass" : "fail", output.cashSurplus >= 0 ? `${money(output.cashSurplus)} remains after buffer` : `${money(-output.cashSurplus)} shortfall after buffer`));
-  eligibility.push(check("Remaining lease", input.remainingLease >= 20 ? (leaseCoverage(input).coversTo95 ? "pass" : "warn") : "fail", output.cpfLimit.note));
+  eligibility.push(check("CPF lease coverage", input.remainingLease <= 20 ? "fail" : output.cpfLimit.restricted ? "warn" : "pass", output.cpfLimit.note));
   eligibility.push(check("Citizenship and ABSD", absdRate(input) === 0 ? "pass" : "warn", absdRate(input) === 0 ? "No ABSD modelled" : `${percent(absdRate(input))} applied to the residential component`));
   eligibility.push(check("Grant estimate", output.grants.total > 0 ? "warn" : "pass", output.grants.total > 0 ? "Indicative only; obtain HFE before relying on it" : "No unconfirmed grant is being relied on"));
   if (buyers(input).some((buyer) => buyer.age >= 55 || buyer.properties > 0)) eligibility.push(check("CPF retirement set-asides", "warn", "BRS/FRS and second-property set-asides are not inferred from the OA balance; verify usable CPF directly."));

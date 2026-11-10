@@ -6,7 +6,7 @@
   <meta name="description" content="A guided Singapore home affordability and purchase outlay estimator.">
   <link rel="icon" type="image/png" href="assets/housing-helper-illustration.png">
   <title>Housing Helper v1.5</title>
-  <link rel="stylesheet" href="styles.css?v=1.5.2">
+  <link rel="stylesheet" href="styles.css?v=1.5.3">
 </head>
 <body>
   <main class="app">
@@ -79,11 +79,13 @@
           <div class="subsection wide"><span>Buyer 1</span></div>
           <label>Cash available<input id="cashAvailable" type="number" min="0" step="1000" value="100000"></label>
           <label>CPF-OA available<input id="cpfAvailable" type="number" min="0" step="1000" value="120000"></label>
+          <label class="check-row"><input id="excludeCpfBuyer1" type="checkbox"> Buyer 1 will not use CPF for this home</label>
           <label>Confirmed additional housing grants<input id="otherGrants" type="number" min="0" step="1000" value="0"><small>Only enter an amount already confirmed and not listed in the Grants step.</small></label>
           <label>Net sale proceeds available<input id="saleProceeds" type="number" min="0" step="1000" value="0"></label>
           <div class="buyer2-input subsection wide"><span>Buyer 2</span></div>
           <label class="buyer2-input">Cash available<input id="cashAvailable2" type="number" min="0" step="1000" value="120000"></label>
           <label class="buyer2-input">CPF-OA available<input id="cpfAvailable2" type="number" min="0" step="1000" value="90000"></label>
+          <label class="buyer2-input check-row"><input id="excludeCpfBuyer2" type="checkbox"> Buyer 2 will not use CPF for this home</label>
           <label class="buyer2-input">Confirmed other grants<input id="otherGrants2" type="number" min="0" step="1000" value="0"></label>
           <label class="buyer2-input">Net sale proceeds<input id="saleProceeds2" type="number" min="0" step="1000" value="0"></label>
         </fieldset>
@@ -157,7 +159,7 @@
         <div class="result-metrics"><div><span>Your desired property</span><strong id="targetPrice">$0</strong><small id="targetPriceDetail">Selected target</small></div><div><span>Maximum eligible loan</span><strong id="resultMaxLoan">$0</strong><small id="resultMaxLoanDetail">For this target</small></div><div><span>CPF-OA planned</span><strong id="resultCpfPlanned">$0</strong><small id="resultCpfDetail">From entered balances</small></div><div><span id="resultFundingLabel">Cash position</span><strong id="resultFundingGap">$0</strong><small id="resultFundingDetail">Available for purchase</small></div></div>
         <div class="tabs" role="tablist" aria-label="Result views"><button type="button" class="tab active" data-tab="outlay">Outlay</button><button type="button" class="tab" data-tab="financing">Financing</button><button type="button" class="tab" data-tab="policies">Policies</button><button type="button" class="tab" data-tab="eligibility">Checks</button></div>
         <div class="tab-panel active" id="outlay"><div class="notice funding-bridge" id="fundingBridge"></div><div class="timeline" id="outlayRows"></div><div class="meter-block"><div class="meter-label"><span>Cash available toward requirement</span><strong id="cashRequiredLabel">$0</strong></div><div class="meter"><span id="cashMeter"></span></div><div class="meter-label"><span>CPF-OA planned from entered balance</span><strong id="cpfRequiredLabel">$0</strong></div><div class="meter cpf"><span id="cpfMeter"></span></div></div></div>
-        <div class="tab-panel" id="financing"><div class="finance-comparison" id="financeComparison"></div><div class="breakdown" id="loanRows"></div><div class="notice" id="loanNotice"></div>
+        <div class="tab-panel" id="financing"><div class="finance-comparison" id="financeComparison"></div><div class="breakdown" id="loanRows"></div><div class="notice" id="loanNotice"></div><div class="notice" id="cpfRepaymentNotice" hidden></div>
           <section class="mortgage-comparison" aria-labelledby="mortgageHeading" hidden>
             <h3 id="mortgageHeading">Compare mortgage tenures</h3>
             <p class="section-copy" id="mortgageAssumptions"></p>
@@ -176,6 +178,6 @@
       </section>
     </section>
   </main>
-  <script src="app.js?v=1.5.2"></script>
+  <script src="app.js?v=1.5.3"></script>
 </body>
 </html>

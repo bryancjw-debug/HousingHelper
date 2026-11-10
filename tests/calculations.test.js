@@ -103,4 +103,19 @@ assert.equal(grantFunded.grantUsed, 60000, "selected single grants are applied t
 assert.equal(grantFunded.cpfBalanceUsed, 0, "grant use remains separate from CPF-OA use");
 assert.ok(grantFunded.cashRequired >= grantFunded.duty.total + grantFunded.reno, "housing grants do not pay stamp duty or renovation in the funding waterfall");
 
+const shortLease = input({
+  propertyType: "hdbResale", loanType: "bank", buyerAge: 25,
+  hasSecondBuyer: true, buyerAge2: 35, remainingLease: 65,
+  purchasePrice: 560000, marketValue: 550000, cpfAvailable: 120000, cpfAvailable2: 0,
+  useMaxLoan: false, desiredLoan: 100000, legalFees: 3500
+});
+const cappedCpf = hh.calculate(shortLease);
+assert.equal(cappedCpf.cpfLimit.limit, 495000, "CPF Board worked example, using the lower valuation and no bank uplift");
+assert.equal(cappedCpf.cpfRepaymentHeadroom, 375000, "OA applied to price reduces the shared cap");
+const withFees = hh.calculate({ ...shortLease, cpfAvailable: 600000 });
+assert.equal(withFees.cpfRepaymentHeadroom, 72500, "stamp duty and legal fees do not consume the shared cap");
+assert.equal(hh.cpfUsageLimit({ ...shortLease, excludeCpfBuyer1: true }).limit, 550000, "use the youngest buyer who plans to use CPF");
+assert.equal(hh.cpfUsageLimit({ ...shortLease, remainingLease: 20 }).limit, 0);
+assert.equal(hh.cpfUsageLimit({ ...shortLease, remainingLease: 70 }).limit, 550000);
+
 console.log("Housing Helper calculation tests passed");
